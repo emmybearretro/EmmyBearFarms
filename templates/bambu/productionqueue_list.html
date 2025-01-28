@@ -2,12 +2,15 @@
 
 {% block content %}
     <!-- table for queued to printer files -->
-    <table border="1">
+    <table class="table table-striped table-hover">
         <thead>
             <tr>
+                <th></th>
                 <th>Timestamp</th>
                 <th>Print Image</th>
                 <th>Print File</th>
+                <th>File Revision</th>
+                <th>Latest File Revision</th>
                 <th>Printer</th>
                 <th>Sent to Printer</th>
                 <th>Completed</th>
@@ -19,66 +22,65 @@
         <tbody>
             {% for queue_item in productionqueue_list %}
                 {%  if queue_item.printer and not queue_item.sent_to_printer %}
-            <tr>
-                <td>{{ queue_item.timestamp }}</td>
-                <td>{{ queue_item.print_file.image_tag }}</td>
-                <td>{{ queue_item.print_file.filename }}</td> <!-- Assuming GCodeFile has a name field -->
-                                <td>
-                    {% if queue_item.printer %}
-                        {{ queue_item.printer.name }} <!-- Assuming Printer has a name field -->
-                    {% else %}
-                        Not Assigned
-                    {% endif %}
-                </td>
-                <td>{{ queue_item.sent_to_printer|yesno:"Yes,No" }}</td>
-                <td>{{ queue_item.completed|yesno:"Yes,No" }}</td>
-                <td>{{ queue_item.priority }}</td>
-                <td>{{ queue_item.duration }}</td>
+                <tr class="{% if queue_item.print_file.is_latest %}table-success{% else %}table-danger{% endif %}">>
+                    <td><a href="{% url 'production_queue_update' queue_item.id %}">Update</a></td>
+                        <td>{{ queue_item.timestamp }}</td>
+                    <td>{{ queue_item.print_file.image_tag }}</td>
+                    <td>{{ queue_item.print_file.filename }}</td> <!-- Assuming GCodeFile has a name field -->
 
-            </tr>
+                        <td>{{ queue_item.print_file.revision }}</td>
+                        <td>{{ queue_item.print_file.is_latest|yesno:"Yes,No" }}</td>
+                                    <td>
+                            {{ queue_item.printer.name }} <!-- Assuming Printer has a name field -->
+                    </td>
+                    <td>{{ queue_item.sent_to_printer|yesno:"Yes,No" }}</td>
+                    <td>{{ queue_item.completed|yesno:"Yes,No" }}</td>
+                    <td>{{ queue_item.priority }}</td>
+                    <td>{{ queue_item.duration_formatted.hours }}h{{ queue_item.duration_formatted.minutes }}m{{ queue_item.duration_formatted.seconds }}s</td>
+
+
+                </tr>
                 {% endif %}
-            {% empty %}
-            <tr>
-                <td colspan="7">No items in the production queue.</td>
-            </tr>
             {% endfor %}
         </tbody>
     </table>
         <!-- table for not queued files -->
-    <table border="1">
+    <table class="table table-striped table-hover">
         <thead>
             <tr>
+                <th></th>
                 <th>Timestamp</th>
                 <th>Print Image</th>
                 <th>Print File</th>
+                <th>File Revision</th>
+                <th>Latest File Revision</th>
                 <th>Printer</th>
                 <th>Sent to Printer</th>
                 <th>Completed</th>
                 <th>Priority</th>
-                <th>Duration (hours)</th>
-
+                <th>Duration</th>
             </tr>
         </thead>
         <tbody>
             {% for queue_item in productionqueue_list %}
-                {%  if not queue_item.printer %}
-            <tr>
-                <td>{{ queue_item.timestamp }}</td>
-                <td>{{ queue_item.print_file.image_tag }}</td>
-                <td>{{ queue_item.print_file.filename }}</td> <!-- Assuming GCodeFile has a name field -->
-                                <td>
-                    {% if queue_item.printer %}
-                        {{ queue_item.printer.name }} <!-- Assuming Printer has a name field -->
-                    {% else %}
-                        Not Assigned
-                    {% endif %}
-                </td>
-                <td>{{ queue_item.sent_to_printer|yesno:"Yes,No" }}</td>
-                <td>{{ queue_item.completed|yesno:"Yes,No" }}</td>
-                <td>{{ queue_item.priority }}</td>
-                <td>{{ queue_item.duration }}</td>
+                {%  if not queue_item.printer and not queue_item.sent_to_printer %}
+                <tr class="{% if queue_item.print_file.is_latest %}table-success{% else %}table-danger{% endif %}">>
+                    <td><a href="{% url 'production_queue_update' queue_item.id %}">Assign to Printer</a></td>
+                        <td>{{ queue_item.timestamp }}</td>
+                    <td>{{ queue_item.print_file.image_tag }}</td>
+                    <td>{{ queue_item.print_file.filename }}</td> <!-- Assuming GCodeFile has a name field -->
 
-            </tr>
+                        <td>{{ queue_item.print_file.revision }}</td>
+                        <td>{{ queue_item.print_file.is_latest|yesno:"Yes,No" }}</td>
+                                    <td>
+                            {{ queue_item.printer.name }} <!-- Assuming Printer has a name field -->
+                    </td>
+                    <td>{{ queue_item.sent_to_printer|yesno:"Yes,No" }}</td>
+                    <td>{{ queue_item.completed|yesno:"Yes,No" }}</td>
+                    <td>{{ queue_item.priority }}</td>
+                    <td>{{ queue_item.duration_formatted.hours }}h{{ queue_item.duration_formatted.minutes }}m{{ queue_item.duration_formatted.seconds }}s</td>
+
+                </tr>
                 {% endif %}
             {% empty %}
             <tr>
