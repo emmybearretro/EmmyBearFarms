@@ -64,7 +64,7 @@ class ProductionQueue(models.Model):
     completed = models.BooleanField(default=False)
     priority = models.PositiveIntegerField(null=False, blank=False,default=0) #default low
     duration = models.FloatField(null=False, blank=False)
-
+    printer = models.ForeignKey(Printer, null=True, blank=True, on_delete=models.CASCADE)
 
     def __str__(self):
         return str(f"{self.priority} - {self.print_file.filename}")

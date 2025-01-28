@@ -2,10 +2,11 @@ import json
 
 from django.shortcuts import render
 import redis
+from rest_framework.reverse import reverse_lazy
 
 from bambu.models import ProductionQueue, Printer
 
-from django.views.generic import ListView, DetailView
+from django.views.generic import ListView, DetailView, UpdateView
 
 
 # Create your views here.
@@ -41,3 +42,11 @@ class PrinterDetailView(DetailView):
 
 class ProductionQueueListView(ListView):
     model = ProductionQueue
+
+
+
+class ProductionQueuepdateView(UpdateView):
+    model = ProductionQueue
+    fields = ['printer']  # Fields that can be updated
+    #template_name = 'your_app/yourmodel_update_form.html'  # Optional, customize the template
+    success_url = reverse_lazy('production_queue')
