@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+    <h1> BEEP BOOP </h1>
+    {% for printer in printers %}
+        <h2>{{ printer.sn }}</h2>
+    {% endfor %}
+    {% for job in jobs %}
+        <h3>{{ job.priority }} - {{ job.print_file }}</h3>
+    {% endfor %}
+{% endblock %}

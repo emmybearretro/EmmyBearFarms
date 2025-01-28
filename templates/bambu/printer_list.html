@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+    <h1> BEEP BOOP </h1>
+    {% for printer in printer_list %}
+        {{ printer.serial_number }} - {{ printer.pk }}
+    {% endfor %}
+{% endblock %}

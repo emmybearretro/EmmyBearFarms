@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+    <h1> BEEP BOOP </h1>
+    {% for job in productionqueue_list %}
+        {{ job.print_file.filename }}
+    {% endfor %}
+{% endblock %}
