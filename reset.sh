@@ -21,6 +21,8 @@ done
 rm -f "gcode/*"
 rm -f "threemf/*"
 rm -rf "media/*"
+rm -rf "static/"
+
 
 python manage.py migrate
 export DJANGO_SUPERUSER_PASSWORD="hc"
@@ -30,4 +32,4 @@ python manage.py createsuperuser --noinput --username hc --email hc@hc.local
 python manage.py makemigrations
 python manage.py migrate
 python manage.py compilemessages
-
+python manage.py collectstatic

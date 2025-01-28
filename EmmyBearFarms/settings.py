@@ -38,7 +38,6 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'bambu.apps.BambuConfig',
-    'pages.apps.PagesConfig',
 'rest_framework',
 ]
 

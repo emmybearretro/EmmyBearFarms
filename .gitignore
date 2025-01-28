@@ -1,3 +1,5 @@
+static/
+!*./static
 media/
 migrations/
 .idea/
