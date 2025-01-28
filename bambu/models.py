@@ -8,7 +8,7 @@ import xmltodict
 from django.db.models import FileField
 from django.db.models.fields.files import FieldFile
 from django.utils.safestring import mark_safe
-
+from django.db.models import Max
 
 #some helper stuff
 
@@ -48,6 +48,12 @@ class GCodeFile(models.Model):
     weight = models.CharField(max_length=64, null=False, blank=False)
     print_time = models.FloatField(null=False, blank=False)
 
+    @property
+    def is_latest(self):
+        latest = GCodeFile.objects.filter(filename=self.filename).aggregate(models.Max('revision'))['revision__max']
+        return self.revision == latest
+
+
     def image_tag(self):
         iname = self.image.name
         return mark_safe('<img src="media/%s" width="150" height="150" />' % (self.image.name))
@@ -55,7 +61,7 @@ class GCodeFile(models.Model):
     image_tag.short_description = 'Image'
 
     def __str__(self):
-        return str(f"{self.revision} - {self.filename}")
+        return str(f"{self.filename}")
 
 class ProductionQueue(models.Model):
     timestamp = models.DateTimeField(auto_now_add=True)
@@ -64,7 +70,7 @@ class ProductionQueue(models.Model):
     completed = models.BooleanField(default=False)
     priority = models.PositiveIntegerField(null=False, blank=False,default=0) #default low
     duration = models.FloatField(null=False, blank=False)
-
+    printer = models.ForeignKey(Printer, null=True, blank=True, on_delete=models.CASCADE)
 
     def __str__(self):
         return str(f"{self.priority} - {self.print_file.filename}")
@@ -72,6 +78,23 @@ class ProductionQueue(models.Model):
     def save(self, *args, **kwargs):
         self.duration = self.print_file.print_time
         super(ProductionQueue, self).save(*args, **kwargs)
+
+    @property
+    def duration_formatted(self):
+        seconds = self.duration
+        days = int(seconds // (24 * 3600))
+        seconds = seconds % (24 * 3600)
+        hours = int(seconds // 3600)
+        seconds = seconds % 3600
+        minutes = int(seconds // 60)
+        seconds = int(seconds % 60)
+        return {
+            'days': days,
+            'hours': hours,
+            'minutes': minutes,
+            'seconds': seconds
+        }
+
 
 
 class ThreeMF(models.Model):
@@ -114,7 +137,7 @@ class ThreeMF(models.Model):
                 g.image.save(f"{md5}.png", File(BytesIO(png)), save=False)
                 g.nozzle = plate['nozzle_diameters']
                 g.weight = plate['weight']
-                g.print_time = float(plate['prediction']) / 60.0
+                g.print_time = float(plate['prediction'])
                 g.md5 = md5
                 g.save()
 
