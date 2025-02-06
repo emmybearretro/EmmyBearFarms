@@ -35,7 +35,7 @@ class PrinterState(models.Model):
     chamber_temperature = models.FloatField(default=0.0)
     cooling_fan_speed = models.CharField(max_length=10, default="0")
     current_layer_number = models.IntegerField(default=0)
-    current_stage = models.IntegerField(default=0)
+    current_stage = models.IntegerField(default=256) #256 is the DISCONNECTED state i made
     #current_state = models.CharField(max_length=50, default="DEFAULT")
     fan_gear_status = models.IntegerField(default=0)
     filament_backup = models.JSONField(default=list)  # This stores JSON data
@@ -92,8 +92,7 @@ class PrinterState(models.Model):
         return f"{self.current_state}"
 
     def save(self, *args, **kwargs):
-        if self.current_state == "PrintStatus.PRINTING" or self.gcode_state == "RUNNING":
-            self.printer.blocked = True
+
         super().save(*args, **kwargs)
 
 class GcodeState(models.TextChoices):
@@ -154,13 +153,29 @@ class GCodeFile(models.Model):
 
     def image_tag(self):
         iname = self.image.name
-        return mark_safe('<img src="media/%s" width="150" height="150" />' % (self.image.name))
+        return mark_safe('<img src="/media/%s" width="150" height="150" />' % self.image.name)
+
+    @property
+    def duration_formatted(self):
+        seconds = self.print_time
+        days = int(seconds // (24 * 3600))
+        seconds = seconds % (24 * 3600)
+        hours = int(seconds // 3600)
+        seconds = seconds % 3600
+        minutes = int(seconds // 60)
+        seconds = int(seconds % 60)
+        return {
+            'days': days,
+            'hours': hours,
+            'minutes': minutes,
+            'seconds': seconds
+        }
 
     image_tag.short_description = 'Image'
 
     def __str__(self):
         return str(
-            "BOOP" +
+            f"REV {self.revision}" +
             f" - {self.filename}")
 
 PLATE_CHOICES = [
@@ -170,13 +185,26 @@ PLATE_CHOICES = [
     ("eng_plate", "Engineering Plate"),
 ]
 
+PRIORITY_CHOICES = [
+    (0, 'Lowest'),
+    (5, 'Low'),
+    (10, 'Medium'),
+    (15, 'High'),
+    (20, 'Highest'),
+]
+
+def get_priority_text(priority_value):
+    for value, word in PRIORITY_CHOICES:
+        if value == priority_value:
+            return word
+    return 'Unknown'
 
 class ProductionQueue(models.Model):
     timestamp = models.DateTimeField(auto_now_add=True)
     print_file = models.ForeignKey(GCodeFile, null=False, blank=False,on_delete=models.CASCADE)
     sent_to_printer = models.BooleanField(default=False)
     completed = models.BooleanField(default=False)
-    priority = models.PositiveIntegerField(null=False, blank=False,default=0) #default low
+    priority = models.IntegerField(choices=PRIORITY_CHOICES, default=0)
     duration = models.FloatField(null=False, blank=False,default=0.0)
     printer = models.ForeignKey(Printer, null=True, blank=True, on_delete=models.CASCADE)
     bed_leveling = models.BooleanField(default=True, null=False, blank=False)
@@ -192,6 +220,11 @@ class ProductionQueue(models.Model):
     def save(self, *args, **kwargs):
         self.duration = self.print_file.print_time
         super(ProductionQueue, self).save(*args, **kwargs)
+
+
+    @property
+    def priority_str(self):
+        return get_priority_text(self.priority)
 
     @property
     def print_time(self):
@@ -285,7 +318,6 @@ class PrinterQueue(models.Model):
 class ThreeMF(models.Model):
     file = models.FileField(upload_to='threemf')
     #p = models.ForeignKey(PrintableFile, related_name='threemf',on_delete=models.CASCADE)
-
 
     def save(self, *args, **kwargs):
         i = 1

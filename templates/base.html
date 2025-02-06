@@ -7,8 +7,8 @@
     <title>Emmy Bear Farms</title>
 
     <!--<link rel="stylesheet" href="{% static 'tuicss.min.css' %}">-->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" integrity="sha512-Evv84Mr4kqVGRNSgIGL/F/aIDqQb7xQ2vcrdIwxfjThSH8CSR7PBEakCr51Ck+w+/U6swU2Im1vVX0SVk9ABhg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-     <link href="https://fonts.googleapis.com/css?family=Press+Start+2P" rel="stylesheet">
+<!--<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" integrity="sha512-Evv84Mr4kqVGRNSgIGL/F/aIDqQb7xQ2vcrdIwxfjThSH8CSR7PBEakCr51Ck+w+/U6swU2Im1vVX0SVk9ABhg==" crossorigin="anonymous" referrerpolicy="no-referrer" />-->
+    <link href="https://fonts.googleapis.com/css?family=Press+Start+2P" rel="stylesheet">
     <link href="https://unpkg.com/nes.css/css/nes.css" rel="stylesheet" />
         <style>
 
@@ -34,7 +34,19 @@
     </style>
 
 </head>
-    <body class="center" style="padding: 50px">
+<body class="center" style="padding: 50px">
+<nav>
+  <ul class="nes-container is-dark" style="display: flex; align-items: center; list-style-type: none;">
+    <li><a href="{% url 'printer_list' %}" class="nes-btn">All Printers</a></li>
+    <li><a href="{% url 'print-queue' %}" class="nes-btn">Production Queue</a></li>
+
+    <li><a href="{% url 'queued-no-printers' %}" class="nes-btn">Queued No Printers</a></li>
+    <li><a href="{% url 'upload_three_mf' %}" class="nes-btn">Files</a></li>
+    <li><a href="#" class="nes-btn">printqueue</a></li>
+  </ul>
+</nav>
+
+
 
 {% block content %}
 {% endblock %}

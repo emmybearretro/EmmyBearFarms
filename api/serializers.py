@@ -14,9 +14,9 @@ class PrinterSerializer(serializers.ModelSerializer):
         instance.name = validated_data.get('name', instance.name)
         instance.serial_number = validated_data.get('serial_number', instance.serial_number)
         instance.access_code = validated_data.get('access_code', instance.access_code)
-        instance.ip = validated_data.get('ip', instance.ip)
-        instance.nozzle_diameter = validated_data.get('nozzle_diameter', instance.nozzle_diameter)
-        instance.nozzle_type = validated_data.get('nozzle_type', instance.nozzle_type)
+        instance.ip_address = validated_data.get('ip_address', instance.ip_address)
+        #instance.nozzle_diameter = validated_data.get('nozzle_diameter', instance.nozzle_diameter)
+        #instance.nozzle_type = validated_data.get('nozzle_type', instance.nozzle_type)
         instance.save()
         return instance
 

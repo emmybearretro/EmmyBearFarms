@@ -5,8 +5,8 @@
     <!-- table for queued to printer files -->
 <section>
 <div class="nes-container with-title">
-  <p class="title">Current Queue For All Printers</p>
-    <div class="nes-table-responsive" style="text-align: left; padding: 10px;">
+  <p class="title">Current Queue With No Printers Assigned</p>
+    <div class="nes-table" style="text-align: left; padding: 10px;">
             <table class="nes-table is-centered is-bordered" style="width: 100%">
                 <thead>
                 <tr>
@@ -19,18 +19,17 @@
                 </tr>
                 </thead>
                 <tbody>
-                {% for queue_item in productionqueue_list|filter_by_fields:"printer=notnone,sent_to_printer=False" %}
+                {% for queue_item in productionqueue_list|filter_by_fields:"printer=none,sent_to_printer=False" %}
                     <tr data-url="/print/{% url 'production_queue_update' queue_item.id %}"  class="{% if queue_item.print_file.is_latest %}{% else %}nes-text is-error{% endif %}">
                         <td colspan="2" class="centered-cell">
                             <div>
                                 <a class="nes-btn
                                         {% if queue_item.print_file.is_latest %}{% else %}is-error{% endif %}
-                                        " href="{% url 'production_queue_update' queue_item.id %}">Update</a>
+                                        " href="{% url 'production_queue_update' queue_item.id %}">Update Item</a>
                             </div>
                             <br>
-
                             <div>
-                                <button class="nes-btn is-warning open-dialog">Print</button>
+                                <button class="nes-btn is-warning open-dialog">Assign To Printer</button>
                             </div>
                         </td>
                         <td class="centered-cell" colspan="2">{{ queue_item.timestamp|date:"m/d/y H:i" }}</td>

@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    
+    <section>
+            <div class="nes-container with-title">
+            <p class="title">Upload 3MF File</p>
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <label for="file">Select file:</label>
+                <input type="file" name="file" accept=".3mf" class="nes-input" id="id_file" required>
+                <button type="submit" class="nes-btn is-primary">Upload</button>
+            </form>
+        </div>
+    
+<div class="nes-container with-title">
+  <p class="title">At Files At Latest Revision</p>
+    <div class="nes-table" style="text-align: left; padding: 10px;">
+            <table class="nes-table is-centered is-bordered" style="width: 100%">
+                <thead>
+                <tr>
+                    <th>Action</th>
+                    <th>Image</th>
+                    <th>FileName</th>
+                    <th>Revision</th>
+                    <th>Nozzle</th>
+                    <th>Duration</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for gcode_file in gcode_files %}
+                    <tr data-url="{% url 'add_to_queue' gcode_file.id %}" >
+                    <td>
+                        <div>
+                                <button class="nes-btn is-warning open-dialog">Queue File</button>
+                            </div></td>
+                        <td>{{ gcode_file.image_tag }}</td>
+                        <td>{{ gcode_file.filename }}</td>
+                        <td>{{ gcode_file.revision }}</td>
+                        <td>{{ gcode_file.nozzle }}</td>
+                        <td colspan="2"
+                            class="centered-cell">{{ gcode_file.duration_formatted.hours }}h{{ gcode_file.duration_formatted.minutes }}m{{ gcode_file.duration_formatted.seconds }}s
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center">No Files available.</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+    </div>
+</div>
+            <dialog class="nes-dialog" id="dialog-default">
+    <form method="dialog">
+      <p class="title">WARNING</p>
+      <p>Are you sure you want to queue this job to the printer?</p>
+      <menu class="dialog-menu">
+        <button class="nes-btn">Cancel</button>
+        <button class="nes-btn is-primary" id="confirmPrint">Confirm</button>
+      </menu>
+    </form>
+  </dialog>
+    </section>
+{% endblock %}
+

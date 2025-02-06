@@ -19,11 +19,11 @@
                 <tbody>
                 {% for printer in printer_list %}
                     <tr>
-                        <td><a class="link-primary" href="{% url 'printer_detail' printer.id %}">{{ printer.name }}</a>
+                        <td><a class="link-primary" href="{% url 'printer_detail' printer.serial_number %}">{{ printer.name }}</a>
                         </td>
                         <td>{{ printer.ip_address }}</td>
                         <td><a class="link-primary"
-                               href="{% url 'printer_detail' printer.id %}">{{ printer.serial_number }}</a></td>
+                               href="{% url 'printer_detail' printer.serial_number %}">{{ printer.serial_number }}</a></td>
                         <td>{{ printer.state.nozzle_type }}</td>
                         <td>{{ printer.state.nozzle_diameter }}mm</td>
                         <td>{{ printer.state.gcode_state}}</td>

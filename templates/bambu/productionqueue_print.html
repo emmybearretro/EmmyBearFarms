@@ -2,47 +2,69 @@
 {% load custom_tags %}
 
 {% block content %}
-    <div class="tui-window" style="text-align: left;">
-            <fieldset class="tui-fieldset">
-<LEGEND>On Printer</LEGEND>
-                <table class="tui-table hovered-cyan" style="width: 700px">
+    <section>
+<div class="nes-container with-title">
+  <p class="title">
+      {% if serial_number is not None %}
+      Production Queue For {{ serial_number }}
+      {% else %}
+      Entire Production Queue
+      {% endif %}
+  </p>
+    <div class="nes-table" style="text-align: left; padding: 10px;">
+            <table class="nes-table is-centered is-bordered" style="width: 100%">
         <thead>
             <tr>
-                <th>Action</th>
-                <th></th>
-                <th>Latest Rev</th>
+                <th colspan="2">Action</th>
+                <th colspan="2">Printer</th>
                 <th>Priority</th>
-                <th>Duration</th>
+                <th colspan="2">Date Queued</th>
+                <th colspan="3">File</th>
+                <th>Latest Rev</th>
+
+                <th colspan="2">Duration</th>
             </tr>
         </thead>
         <tbody>
-            {% for queue_item in productionqueue_list|filter_by_fields:"printer=none,sent_to_printer=True" %}
+            {% for queue_item in production_queue|filter_by_fields:"printer=notnone" %}
                 <tr class="{% if queue_item.print_file.is_latest %}{% else %}highlight{% endif %}">
-                    <td class="centered-cell"><a class="tui-button"  href="{% url 'production_queue_update' queue_item.id %}">Update</a></td>
-                        <td>{{ queue_item.timestamp }}</td>
-                    <td class="centered-cell">{{ queue_item.print_file.image_tag }}
+                    <td colspan="2" class="centered-cell"><a class="nes-btn"  href="{% url 'production_queue_update' queue_item.id %}">Update Print Job</a></td>
+                    <td colspan="2">
+                        <a href="{% url 'print-queue-printer' queue_item.printer.serial_number %}">
+                        {{ queue_item.printer.name }}
+                        </a>
+
+                    </td>
+                    <td>{{ queue_item.priority_str }}</td>
+
+                    <td class="centered-cell" colspan="2">{{ queue_item.timestamp|date:"m/d/y H:i" }}</td>
+
+                    <td colspan="3" class="centered-cell">
+                        {{ queue_item.print_file.image_tag }}
                         <div>{{ queue_item.print_file.filename }}</div>
                     </td> <!-- Assuming GCodeFile has a name field -->
+                    <td>{{ queue_item.print_file.revision }}</td>
 
-                    <td>{{ queue_item.duration_formatted.hours }}h{{ queue_item.duration_formatted.minutes }}m{{ queue_item.duration_formatted.seconds }}s</td>
+                    <td colspan="2">{{ queue_item.duration_formatted.hours }}h{{ queue_item.duration_formatted.minutes }}m{{ queue_item.duration_formatted.seconds }}s</td>
 
 
                 </tr>
 
             {% empty %}
             <tr>
-                <td colspan="8" class="centered-cell">No Items On Printers</td>
+                <td colspan="8" class="centered-cell">No Items In Queue</td>
 
             </tr>
                             <tr>
                                 <td colspan="8" class="centered-cell">
-                                    <a class="tui-button" href="{% url 'production_queue' %}">Change That</a>
+                                    <a class="nes-btn" href="{% url 'queued-no-printers' %}">Change That</a>
                                 </td>
 
             </tr>
             {% endfor %}
         </tbody>
     </table>
-            </fieldset>
     </div>
+</div>
+    </section>
 {% endblock %}
