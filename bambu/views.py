@@ -32,18 +32,41 @@ def index(request):
     r.close()
     return render(request=request, template_name='bambu/index.html',context=context)
 
+
+
+    # def start_print(self,filename: str,
+    #                     plate_number: int,
+    #                     bed_leveling: bool = True,
+    #                     flow_calibration: bool = False,
+    #                     vibration_calibration: bool = False,
+    #                     bed_type:str = "textured_plate",
+    #                     use_ams: bool = True,
+    #                     ams_mapping: list[int] = [0],
+    #                     skip_objects: list[int] | None = None,
+    #                     ) -> bool:
 def send_print_job(request,pk):
     job = get_object_or_404(ProductionQueue, pk=pk)
     print(job.print_file)
-    print_info = {
-        "serial_number": job.printer.serial_number,
-        "filepath": job.print_file.gcode.path,
-        "filename": job.print_file.filename
-    }
-    r = redis.Redis(host='localhost', port=6379, db=0)
-    r.lpush("print", json.dumps(print_info))
-    r.close()
+    if not job.printer.blocked:
+        print_info = {
+            "serial_number": job.printer.serial_number,
+            "filepath": job.print_file.gcode.path,
+            "filename": job.print_file.filename,
+            "plate_number": 1, #we always use 1 because we split all plates into their own files.
+            "bed_leveling": job.bed_leveling,
+            "bed_type": job.bed_type,
+            "use_ams": job.use_ams,
+            "ams_mapping": [],
+            "skip_objects": []
+        }
+        r = redis.Redis(host='localhost', port=6379, db=0)
+        r.lpush(f"{job.printer.serial_number}", json.dumps(print_info))
+        r.close()
+        return redirect('index')
+    else:
+        pass
     return redirect('index')
+
 
 class PrinterListView(ListView):
     model = Printer

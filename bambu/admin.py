@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.utils.safestring import mark_safe
 
-from bambu.models import ThreeMF, GCodeFile, Printer, ProductionQueue
+from bambu.models import ThreeMF, GCodeFile, Printer, ProductionQueue, PrinterState, PrinterQueue
 
 
 # Register your models here.
@@ -13,13 +13,20 @@ class ThreeMFAdmin(admin.ModelAdmin):
 class PrinterAdmin(admin.ModelAdmin):
     pass
 
+@admin.register(PrinterState)
+class PrinterStateAdmin(admin.ModelAdmin):
+    pass
+
 @admin.register(ProductionQueue)
 class ProductionQueueAdmin(admin.ModelAdmin):
     list_display = ('priority','print_file','timestamp')
     ordering = ('-priority','timestamp',)
-    readonly_fields = ['timestamp','sent_to_printer','duration']
+    readonly_fields = ['print_time', 'timestamp', 'sent_to_printer', 'duration']
     pass
 
+@admin.register(PrinterQueue)
+class PrinterQueueAdmin(admin.ModelAdmin):
+    pass
 
 @admin.register(GCodeFile)
 class GCodeAdmin(admin.ModelAdmin):

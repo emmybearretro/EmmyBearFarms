@@ -1,45 +1,48 @@
 {% extends 'base.html' %}
+{% load custom_tags %}
 
 {% block content %}
-    <!-- table for queued to printer files -->
-    <table class="table table-striped table-hover">
+    <div class="tui-window" style="text-align: left;">
+            <fieldset class="tui-fieldset">
+<LEGEND>On Printer</LEGEND>
+                <table class="tui-table hovered-cyan" style="width: 700px">
         <thead>
             <tr>
-                <th>update</th>
+                <th>Action</th>
+                <th></th>
+                <th>Latest Rev</th>
                 <th>Priority</th>
-                <th>Print Image</th>
-                <th>Print File</th>
-                <th>File Revision</th>
-                <th>Latest File Revision</th>
-                <th>Printer</th>
-                <th>Sent to Printer</th>
-                <th>Completed</th>
-
-                <th>Duration (hours)</th>
-
+                <th>Duration</th>
             </tr>
         </thead>
         <tbody>
-            {% for queue_item in productionqueue_list %}
-                {%  if queue_item.printer and queue_item and not queue_item.sent_to_printer %}
-                <tr class="{% if queue_item.print_file.is_latest %}table-success{% else %}table-danger{% endif %}">>
-                    <td><a href="{% url 'production_queue_update' queue_item.id %}" class="btn btn-primary">Update</a></td>
-                    <td><a href="{% url 'production_queue_print' queue_item.id %}" class="btn btn-primary">Print</a></td>
-                    <td>{{ queue_item.priority }}</td>
-                    <td>{{ queue_item.print_file.image_tag }}</td>
-                    <td>{{ queue_item.print_file.filename }}</td> <!-- Assuming GCodeFile has a name field -->
+            {% for queue_item in productionqueue_list|filter_by_fields:"printer=none,sent_to_printer=True" %}
+                <tr class="{% if queue_item.print_file.is_latest %}{% else %}highlight{% endif %}">
+                    <td class="centered-cell"><a class="tui-button"  href="{% url 'production_queue_update' queue_item.id %}">Update</a></td>
+                        <td>{{ queue_item.timestamp }}</td>
+                    <td class="centered-cell">{{ queue_item.print_file.image_tag }}
+                        <div>{{ queue_item.print_file.filename }}</div>
+                    </td> <!-- Assuming GCodeFile has a name field -->
 
-                        <td>{{ queue_item.print_file.revision }}</td>
-                        <td>{{ queue_item.print_file.is_latest|yesno:"Yes,No" }}</td>
-                                    <td>
-                            {{ queue_item.printer.name }} <!-- Assuming Printer has a name field -->
-                    </td>
-                    <td>{{ queue_item.duration }}</td>
+                    <td>{{ queue_item.duration_formatted.hours }}h{{ queue_item.duration_formatted.minutes }}m{{ queue_item.duration_formatted.seconds }}s</td>
+
 
                 </tr>
-                {% endif %}
+
+            {% empty %}
+            <tr>
+                <td colspan="8" class="centered-cell">No Items On Printers</td>
+
+            </tr>
+                            <tr>
+                                <td colspan="8" class="centered-cell">
+                                    <a class="tui-button" href="{% url 'production_queue' %}">Change That</a>
+                                </td>
+
+            </tr>
             {% endfor %}
         </tbody>
     </table>
-
+            </fieldset>
+    </div>
 {% endblock %}

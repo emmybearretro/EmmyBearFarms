@@ -2,7 +2,52 @@
 
 {% block content %}
 
-    <h1> BEEP BOOP </h1>
-    {{ printer.serial_number }}
-    {{ printer.current_state }}
+
+        <div class="tui-window" style="text-align: left;">
+            <fieldset class="tui-fieldset">
+               <!-- <legend class="center">Table hovered</legend> -->
+                <table class="tui-table hovered-cyan" style="width: 700px">
+
+            <thead>
+                <tr>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Name</td>
+                    <td>{{ printer.name }}</td>
+                </tr>
+                <tr>
+                    <td>IP Address</td>
+                    <td>{{ printer.ip }}</td>
+                </tr>
+                <tr>
+                    <td>Serial Number</td>
+                    <td>{{ printer.serial_number }}</td>
+                </tr>
+                <tr>
+                    <td>Access Code</td>
+                    <td>{{ printer.access_code }}</td>
+                </tr>
+                <tr>
+                    <td>Nozzle Type</td>
+                    <td>{{ printer.nozzle_type }}</td>
+                </tr>
+                <tr>
+                    <td>Nozzle Diameter</td>
+                    <td>{{ printer.nozzle_diameter }}mm</td>
+                </tr>
+                <tr>
+                    <td>State</td>
+                    <td>{{ printer.state }}</td>
+                </tr>
+                <tr>
+                    <td>Current State</td>
+                    <td>{{ printer.current_state }}</td>
+                </tr>
+            </tbody>
+        </table>
+            </fieldset>
+    </div>
+
 {% endblock %}

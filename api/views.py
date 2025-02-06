@@ -3,7 +3,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 
-from api.serializers import PrinterSerializer
+from api.serializers import PrinterSerializer, PrinterStateSerializer
 from bambu.models import Printer
 
 
@@ -58,6 +58,31 @@ class PrinterDetailView(APIView):
         printer = self.get_object(serial_number)
         serializer = PrinterSerializer(printer, data=request.data)
         if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class PrinterStatusView(APIView):
+    def get_object(self, serial_number):
+        try:
+            p:Printer = Printer.objects.get(serial_number=serial_number)
+            return p.state
+        except Printer.DoesNotExist:
+            raise Http404
+
+    def get(self, request, serial_number, format=None):
+        state = self.get_object(serial_number)
+        serializer = PrinterStateSerializer(state)
+        return Response(serializer.data)
+
+    def patch(self, request, serial_number, format=None):
+        state = self.get_object(serial_number)
+        serializer = PrinterStateSerializer(state,data=request.data, partial=True)
+        print(type(request.data), request.data)
+        if serializer.is_valid():
+            i = 1
+
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

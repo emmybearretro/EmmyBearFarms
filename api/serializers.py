@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from bambu.models import Printer
+from bambu.models import Printer, PrinterState
+
 
 class PrinterSerializer(serializers.ModelSerializer):
     class Meta:
@@ -18,3 +19,19 @@ class PrinterSerializer(serializers.ModelSerializer):
         instance.nozzle_type = validated_data.get('nozzle_type', instance.nozzle_type)
         instance.save()
         return instance
+
+class PrinterStateSerializer(serializers.ModelSerializer):
+        class Meta:
+            model = PrinterState
+            fields = '__all__'
+
+        def update(self, instance, validated_data):
+            # Update all fields of PrinterState
+            for attr, value in validated_data.items():
+                setattr(instance, attr, value)
+            instance.save()
+            return instance
+
+        def create(self, validated_data):
+            # If you need to create a new PrinterState instance
+            return PrinterState.objects.create(**validated_data)

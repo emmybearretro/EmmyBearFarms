@@ -1,92 +1,85 @@
 {% extends 'base.html' %}
+{% load custom_tags %}
 
 {% block content %}
     <!-- table for queued to printer files -->
-    <table class="table table-striped table-hover">
-        <thead>
-            <tr>
-                <th></th>
-                <th>Timestamp</th>
-                <th>Print Image</th>
-                <th>Print File</th>
-                <th>File Revision</th>
-                <th>Latest File Revision</th>
-                <th>Printer</th>
-                <th>Sent to Printer</th>
-                <th>Completed</th>
-                <th>Priority</th>
-                <th>Duration (hours)</th>
-
-            </tr>
-        </thead>
-        <tbody>
-            {% for queue_item in productionqueue_list %}
-                {%  if queue_item.printer and not queue_item.sent_to_printer %}
-                <tr class="{% if queue_item.print_file.is_latest %}table-success{% else %}table-danger{% endif %}">>
-                    <td><a href="{% url 'production_queue_update' queue_item.id %}">Update</a></td>
-                        <td>{{ queue_item.timestamp }}</td>
-                    <td>{{ queue_item.print_file.image_tag }}</td>
-                    <td>{{ queue_item.print_file.filename }}</td> <!-- Assuming GCodeFile has a name field -->
-
-                        <td>{{ queue_item.print_file.revision }}</td>
-                        <td>{{ queue_item.print_file.is_latest|yesno:"Yes,No" }}</td>
-                                    <td>
-                            {{ queue_item.printer.name }} <!-- Assuming Printer has a name field -->
-                    </td>
-                    <td>{{ queue_item.sent_to_printer|yesno:"Yes,No" }}</td>
-                    <td>{{ queue_item.completed|yesno:"Yes,No" }}</td>
-                    <td>{{ queue_item.priority }}</td>
-                    <td>{{ queue_item.duration_formatted.hours }}h{{ queue_item.duration_formatted.minutes }}m{{ queue_item.duration_formatted.seconds }}s</td>
-
-
+<section>
+<div class="nes-container with-title">
+  <p class="title">Current Queue For All Printers</p>
+    <div class="nes-table-responsive" style="text-align: left; padding: 10px;">
+            <table class="nes-table is-centered is-bordered" style="width: 100%">
+                <thead>
+                <tr>
+                    <th colspan="2">Action</th>
+                    <th colspan="2">Date</th>
+                    <th>Priority</th>
+                    <th colspan="4"></th>
+                    <th colspan="2">Rev</th>
+                    <th colspan="2">Duration</th>
                 </tr>
-                {% endif %}
-            {% endfor %}
-        </tbody>
-    </table>
-        <!-- table for not queued files -->
-    <table class="table table-striped table-hover">
-        <thead>
-            <tr>
-                <th></th>
-                <th>Timestamp</th>
-                <th>Print Image</th>
-                <th>Print File</th>
-                <th>File Revision</th>
-                <th>Latest File Revision</th>
-                <th>Printer</th>
-                <th>Sent to Printer</th>
-                <th>Completed</th>
-                <th>Priority</th>
-                <th>Duration</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for queue_item in productionqueue_list %}
-                {%  if not queue_item.printer and not queue_item.sent_to_printer %}
-                <tr class="{% if queue_item.print_file.is_latest %}table-success{% else %}table-danger{% endif %}">>
-                    <td><a href="{% url 'production_queue_update' queue_item.id %}">Assign to Printer</a></td>
-                        <td>{{ queue_item.timestamp }}</td>
-                    <td>{{ queue_item.print_file.image_tag }}</td>
-                    <td>{{ queue_item.print_file.filename }}</td> <!-- Assuming GCodeFile has a name field -->
+                </thead>
+                <tbody>
+                {% for queue_item in productionqueue_list|filter_by_fields:"printer=notnone,sent_to_printer=False" %}
+                    <tr data-url="/print/{% url 'production_queue_update' queue_item.id %}"  class="{% if queue_item.print_file.is_latest %}{% else %}nes-text is-error{% endif %}">
+                        <td colspan="2" class="centered-cell">
+                            <div>
+                                <a class="nes-btn
+                                        {% if queue_item.print_file.is_latest %}{% else %}is-error{% endif %}
+                                        " href="{% url 'production_queue_update' queue_item.id %}">Update</a>
+                            </div>
+                            <br>
 
-                        <td>{{ queue_item.print_file.revision }}</td>
-                        <td>{{ queue_item.print_file.is_latest|yesno:"Yes,No" }}</td>
-                                    <td>
-                            {{ queue_item.printer.name }} <!-- Assuming Printer has a name field -->
-                    </td>
-                    <td>{{ queue_item.sent_to_printer|yesno:"Yes,No" }}</td>
-                    <td>{{ queue_item.completed|yesno:"Yes,No" }}</td>
-                    <td>{{ queue_item.priority }}</td>
-                    <td>{{ queue_item.duration_formatted.hours }}h{{ queue_item.duration_formatted.minutes }}m{{ queue_item.duration_formatted.seconds }}s</td>
+                            <div>
+                                <button class="nes-btn is-warning open-dialog">Print</button>
+                            </div>
+                        </td>
+                        <td class="centered-cell" colspan="2">{{ queue_item.timestamp|date:"m/d/y H:i" }}</td>
+                        <td class="centered-cell">{{ queue_item.priority }}</td>
 
-                </tr>
-                {% endif %}
-            {% empty %}
-            <tr>
-                <td colspan="7">No items in the production queue.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+
+                        <td colspan="4" class="centered-cell">{{ queue_item.print_file.image_tag }}
+                            <div>{{ queue_item.print_file.filename }}</div>
+                        </td> <!-- Assuming GCodeFile has a name field -->
+
+                        <td colspan="2">
+                            <a href="#" class="nes-badge is-centered">
+                                {% if not queue_item.print_file.is_latest %}
+                                    <span class="is-error">
+                                {% else %}
+                                    <span class="is-success">
+                                {% endif %}
+                                {{ queue_item.print_file.revision }}</span>
+                            </a>
+                        </td>
+
+                        <td colspan="2"
+                            class="centered-cell">{{ queue_item.duration_formatted.hours }}h{{ queue_item.duration_formatted.minutes }}m{{ queue_item.duration_formatted.seconds }}s
+                        </td>
+
+
+                    </tr>
+
+                {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center">No Items In Queue</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+
+        <dialog class="nes-dialog" id="dialog-default">
+    <form method="dialog">
+      <p class="title">WARNING</p>
+      <p>Are you sure you want to send this job to the printer?</p>
+      <menu class="dialog-menu">
+        <button class="nes-btn">Cancel</button>
+        <button class="nes-btn is-primary" id="confirmPrint">Confirm</button>
+      </menu>
+    </form>
+  </dialog>
+
+    </div>
+    </div>
+
+</section>
 {% endblock %}
