@@ -1,6 +1,6 @@
 # forms.py
 from django import forms
-from .models import GCodeFile, ProductionQueue, Printer
+from .models import GCodeFile, ProductionQueue, Printer, Folder
 
 from .models import ThreeMF
 
@@ -54,6 +54,33 @@ class FilteredProductionQueueForm(forms.ModelForm):
         else:
             # If no GCodeFile is specified, you might want to show all printers or none
             self.fields['printer'].queryset = Printer.objects.none()
+
+class GCodeFileForm(forms.ModelForm):
+    class Meta:
+        model = GCodeFile
+        fields = ['displayname','filename', 'nozzle', 'weight', 'print_time', 'folders']
+        widgets = {
+            'displayname': forms.TextInput(attrs={'class': 'form-control'}),
+            'filename': forms.TextInput(attrs={'class': 'form-control','readonly': 'readonly'}),
+            'revision': forms.NumberInput(attrs={'class': 'form-control'}),
+            'nozzle': forms.TextInput(attrs={'class': 'form-control'}),
+            'weight': forms.TextInput(attrs={'class': 'form-control'}),
+            'print_time': forms.NumberInput(attrs={'class': 'form-control'}),
+            'folders': forms.CheckboxSelectMultiple(),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['folders'].queryset = Folder.objects.all()
+
+
+
+
+
+
+
+
+
 
 class SendPrintJobForm(forms.ModelForm):
     class Meta:

@@ -17,7 +17,9 @@ urlpatterns = [
     #path('about',views.about,name='about'),
 
     #path('files/',views.FileListView.as_view(),name='file_list_view'),
-    path('files/',views.upload_three_mf, name='upload_three_mf'),
+    path('files/', views.upload_three_mf, name='file-list-view'),
+    path('files/<int:pk>/edit/', views.gcodefile_update, name='file-update'),
+    path('files/<int:pk>/delete/', views.gcodefile_delete, name='file-delete'),
     path('queue/add/<int:file_id>/', views.add_to_production_queue, name='add_to_queue'),
 
 ]

@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 
 {% block content %}
-    
+
     <section>
             <div class="nes-container with-title">
             <p class="title">Upload 3MF File</p>
@@ -12,7 +12,7 @@
                 <button type="submit" class="nes-btn is-primary">Upload</button>
             </form>
         </div>
-    
+
 <div class="nes-container with-title">
   <p class="title">At Files At Latest Revision</p>
     <div class="nes-table" style="text-align: left; padding: 10px;">
@@ -35,8 +35,12 @@
                                 <button class="nes-btn is-warning open-dialog">Queue File</button>
                             </div></td>
                         <td>{{ gcode_file.image_tag }}</td>
-                        <td>{{ gcode_file.filename }}</td>
-                        <td>{{ gcode_file.revision }}</td>
+                        <td> {% for folder in gcode_file.folders.all %}
+                                OO {{ folder.name }} OO
+                            <br>
+                            {% endfor %}
+                            {{ gcode_file.filename }}</td>
+                        <td>{{ gcode_file.displayname }}</td>
                         <td>{{ gcode_file.nozzle }}</td>
                         <td colspan="2"
                             class="centered-cell">{{ gcode_file.duration_formatted.hours }}h{{ gcode_file.duration_formatted.minutes }}m{{ gcode_file.duration_formatted.seconds }}s

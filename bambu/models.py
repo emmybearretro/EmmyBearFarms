@@ -26,6 +26,7 @@ def metatoplate(metadata):
     return pconfig
 
 class PrinterState(models.Model):
+    updated_at = models.DateTimeField(auto_now=True)
     ams_rfid_status = models.IntegerField(default=0)
     ams_status = models.IntegerField(default=0)
     bed_temperature = models.FloatField(default=0.0)
@@ -112,11 +113,16 @@ class Printer(models.Model):
     serial_number = models.CharField(max_length=20)
     state = models.OneToOneField(PrinterState, on_delete=models.CASCADE, related_name='printer',null=True,blank=True)
     blocked = models.BooleanField(default=False,blank=True)
-    connected = models.BooleanField(default=False,blank=True)
 
     @property
     def has_error(self):
         pass
+
+    @property
+    def connected(self):
+        return self.state.current_stage <= 255
+
+
 
     def __str__(self):
         return f"Printer: {self.serial_number}"
@@ -134,26 +140,42 @@ class Printer(models.Model):
         super().save(*args, **kwargs)
 
 
+PLATE_CHOICES = [
+    ("textured_plate", "Textured plate"),
+    ("cool_plate", "Cool Plate / PLA Plate"),
+    ("hot_plate", "Smooth PEI Plate / High Temp Plate"),
+    ("eng_plate", "Engineering Plate"),
+]
+
+
+class Folder(models.Model):
+    name = models.CharField(max_length=255, unique=True)
+
+    def __str__(self):
+        return self.name
+
 class GCodeFile(models.Model):
-    revision = models.PositiveIntegerField()
     timestamp = models.DateTimeField(auto_now_add=True)
     gcode = models.FileField(upload_to='gcode', null=False, blank=False)
     md5 = models.CharField(max_length=64, null=True, blank=True)
+    displayname = models.CharField(max_length=4096, null=True, blank=True)
     filename = models.CharField(max_length=4096, null=True, blank=True)
     image = models.ImageField(upload_to='images', null=False, blank=False)
     nozzle = models.CharField(max_length=64, null=False, blank=False)
     weight = models.CharField(max_length=64, null=False, blank=False)
     print_time = models.FloatField(null=False, blank=False)
+    folders = models.ManyToManyField(Folder)
+
 
     @property
     def is_latest(self):
-        latest = GCodeFile.objects.filter(filename=self.filename).aggregate(models.Max('revision'))['revision__max']
-        return self.revision == latest
-
+        latest = GCodeFile.objects.filter(filename=self.filename).aggregate(models.Max('timestamp'))['timestamp__max']
+        return self.timestamp == latest
 
     def image_tag(self):
-        iname = self.image.name
-        return mark_safe('<img src="/media/%s" width="150" height="150" />' % self.image.name)
+        return mark_safe('<img src="media/%s" width="150" height="150" />' % (self.image.name))
+
+    image_tag.short_description = 'Image'
 
     @property
     def duration_formatted(self):
@@ -171,19 +193,11 @@ class GCodeFile(models.Model):
             'seconds': seconds
         }
 
-    image_tag.short_description = 'Image'
 
     def __str__(self):
         return str(
-            f"REV {self.revision}" +
-            f" - {self.filename}")
+            f" {self.filename}")
 
-PLATE_CHOICES = [
-    ("textured_plate", "Textured plate"),
-    ("cool_plate", "Cool Plate / PLA Plate"),
-    ("hot_plate", "Smooth PEI Plate / High Temp Plate"),
-    ("eng_plate", "Engineering Plate"),
-]
 
 PRIORITY_CHOICES = [
     (0, 'Lowest'),
@@ -214,6 +228,7 @@ class ProductionQueue(models.Model):
         choices=PLATE_CHOICES,
         default="textured_plate",  # Set a default if needed
     )
+
     def __str__(self):
         return str(f"{self.priority} - {self.print_file.filename}")
 
@@ -346,10 +361,6 @@ class ThreeMF(models.Model):
                     print("MD5 mismatch")
                 g = GCodeFile()
                 g.filename = f"{self.file.name}_plate{plate['index']}.gcode"
-                try:
-                    g.revision = GCodeFile.objects.filter(filename=g.filename).latest('revision').revision + 1
-                except GCodeFile.DoesNotExist:
-                    g.revision = 1
                 g.gcode.save(md5, File(BytesIO(gcode)), save=False)
                 g.image.save(f"{md5}.png", File(BytesIO(png)), save=False)
                 g.nozzle = plate['nozzle_diameters']

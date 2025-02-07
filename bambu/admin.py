@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.utils.safestring import mark_safe
 
-from bambu.models import ThreeMF, GCodeFile, Printer, ProductionQueue, PrinterState, PrinterQueue
+from bambu.models import ThreeMF, GCodeFile, Printer, ProductionQueue, PrinterState, PrinterQueue, Folder
 
 
 # Register your models here.
@@ -28,14 +28,18 @@ class ProductionQueueAdmin(admin.ModelAdmin):
 class PrinterQueueAdmin(admin.ModelAdmin):
     pass
 
+@admin.register(Folder)
+class FolderAdmin(admin.ModelAdmin):
+    pass
+
 @admin.register(GCodeFile)
 class GCodeAdmin(admin.ModelAdmin):
     # This displays the image in the list view
-    list_display = ['image_tag','filename','revision','print_time','nozzle','weight','md5','timestamp']
+    list_display = ['image_tag','filename','print_time','nozzle','weight','md5','timestamp']
     list_display_links = ['image_tag','filename']
-    list_filter = ['filename','revision']
-    fields = ['image_tag','print_time','filename','nozzle','weight','revision','md5','timestamp']
-    readonly_fields = ['image_tag','timestamp','filename','revision','md5','print_time']
+    list_filter = ['filename']
+    fields = ['image_tag','print_time','folders','filename','nozzle','weight','md5','timestamp']
+    readonly_fields = ['image_tag','timestamp','filename','md5','print_time']
 
     def image_tag(self, obj):
         if obj.image:

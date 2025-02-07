@@ -1,5 +1,6 @@
 import json
 
+from django.db.models import Max
 from django.http import Http404
 from django.shortcuts import render, get_object_or_404, redirect
 import redis
@@ -8,7 +9,7 @@ from django.views.decorators.http import require_http_methods
 from rest_framework.reverse import reverse_lazy
 
 from bambu import models
-from bambu.forms import FilteredProductionQueueForm, ThreeMFForm
+from bambu.forms import FilteredProductionQueueForm, ThreeMFForm, GCodeFileForm
 from bambu.models import ProductionQueue, Printer, GCodeFile, PLATE_CHOICES
 from django.views.generic import ListView, DetailView, UpdateView
 
@@ -22,21 +23,25 @@ def upload_three_mf(request):
         if form.is_valid():
             three_mf = form.save(commit=False)  # Don't save to the database yet
             three_mf.save()  # This will call the custom save method of ThreeMF
-            return redirect('upload_three_mf')  # Redirect to a success page or view
+            return redirect('file-list-view')  # Redirect to a success page or view
     else:
         form = ThreeMFForm()
 
-    # Assuming you have a list view or similar for your GCode files
-    all_files = GCodeFile.objects.all() # Adjust this query as needed
-    # Dictionary to hold the latest revision of each file by filename
-    latest_files = {}
+    # Group by filename and get the latest one per group based on timestamp
+    latest_files = GCodeFile.objects.values('filename').annotate(
+        latest_timestamp=Max('timestamp')
+    ).values('filename', 'latest_timestamp')
 
-    for file in all_files:
-        if file.filename not in latest_files or file.revision > latest_files[file.filename].revision:
-            latest_files[file.filename] = file
+    # Now, fetch the actual GCodeFile objects that match these latest timestamps
+    latest_gcode_files = GCodeFile.objects.filter(
+        timestamp__in=[file['latest_timestamp'] for file in latest_files],
+        filename__in=[file['filename'] for file in latest_files]
+    )
+
+
     context = {
         'form': form,
-        'gcode_files': latest_files.values(),
+        'gcode_files': latest_gcode_files.values(),
     }
     return render(request, 'bambu/file_list_view.html', context)
 def index(request):
@@ -232,7 +237,7 @@ def add_to_production_queue(request, file_id):
         )
 
         # Redirect back to the list of files or another appropriate page
-        return redirect(reverse('upload_three_mf'))  # Assuming 'file_list_view' is your URL name
+        return redirect(reverse('file-list-view'))  # Assuming 'file_list_view' is your URL name
 
     context = {
         'gcode_file': gcode_file,
@@ -240,3 +245,23 @@ def add_to_production_queue(request, file_id):
         'plate_choices': PLATE_CHOICES,
     }
     return render(request, 'bambu/add_to_queue.html', context)
+
+
+def gcodefile_update(request, pk):
+    gcode_file = get_object_or_404(GCodeFile, pk=pk)
+    if request.method == 'POST':
+        form = GCodeFileForm(request.POST, request.FILES, instance=gcode_file)
+        if form.is_valid():
+            form.save()
+            return redirect('file-list-view')
+    else:
+        form = GCodeFileForm(instance=gcode_file)
+    return render(request, 'bambu/gcodefile_form.html', {'form': form})
+
+# Delete
+def gcodefile_delete(request, pk):
+    gcode_file = get_object_or_404(GCodeFile, pk=pk)
+    if request.method == 'POST':
+        gcode_file.delete()
+        return redirect('file-list-view')
+    return render(request, 'bambu/gcodefile_confirm_delete.html', {'object': gcode_file})
