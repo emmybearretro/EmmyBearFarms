@@ -87,6 +87,7 @@
                     <th>File</th>
                     <th>Priority</th>
                     <th>Duration</th>
+                    <th>Actions</th>  <!-- Added new column for actions -->
                 </tr>
             </thead>
             <tbody>
@@ -96,10 +97,15 @@
                         <td>{{ item.print_file.filename }}</td>
                         <td>{{ item.priority_str }}</td>
                         <td>{{ item.print_time }}</td>
+                        <td>
+                            <a href="{% url 'add_to_command_queue' serial_number=printer.serial_number queue_id=item.id %}" class="nes-btn is-primary">
+                                Send to Command Queue
+                            </a>
+                        </td>
                     </tr>
                 {% empty %}
                     <tr>
-                        <td colspan="4" class="text-center">No items in the queue.</td>
+                        <td colspan="5" class="text-center">No items in the queue.</td>
                     </tr>
                 {% endfor %}
             </tbody>

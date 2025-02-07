@@ -10,7 +10,7 @@ from rest_framework.reverse import reverse_lazy
 
 from bambu import models
 from bambu.forms import FilteredProductionQueueForm, ThreeMFForm
-from bambu.models import ProductionQueue, Printer, GCodeFile, PLATE_CHOICES, PrinterCommand
+from bambu.models import ProductionQueue, Printer, GCodeFile, PLATE_CHOICES, PrinterCommand, PredefinedCommand
 from django.views.generic import ListView, DetailView, UpdateView
 
 
@@ -306,3 +306,31 @@ def send_command_view(request,serial_number, command_id):
 
     # Redirect back to the printer detail view
     return redirect('printer_detail', serial_number=printer.serial_number)
+
+
+def add_to_command_queue(request, serial_number, queue_id):
+    printer = get_object_or_404(Printer, serial_number=serial_number)
+    queue_item = get_object_or_404(ProductionQueue, id=queue_id, printer=printer)
+
+    if queue_item.completed:
+        raise Http404("This queue item cannot be sent to the command queue.")
+
+    # Assuming there's a predefined command for "Print" or similar action
+    print_command = get_object_or_404(PredefinedCommand, name="Print")  # Adjust the name as per your setup
+
+    # Create a new command in the command queue based on the production queue item
+    last_position = \
+    PrinterCommand.objects.filter(printer=printer, completed=False, archived=False).aggregate(models.Max('position'))[
+        'position__max'] or 0
+    PrinterCommand.objects.create(
+        printer=printer,
+        predefined_command=print_command,
+        position=last_position + 1
+    )
+
+    # Optionally, mark the queue item as sent to printer or similar status update
+    queue_item.sent_to_printer = True
+    queue_item.save()
+
+    # Redirect back to the printer detail view or another appropriate page
+    return redirect('printer_detail', serial_number=serial_number)
