@@ -120,6 +120,27 @@ def printer_history_view(request, serial_number):
     }
     return render(request, 'bambu/printer_history.html', context)
 
+
+def clone_queue_item(request, queue_id):
+    queue_item = get_object_or_404(ProductionQueue, id=queue_id)
+
+    # Create a new queue item by copying the original one
+    new_queue_item = ProductionQueue.objects.create(
+        print_file=queue_item.print_file,
+        priority=queue_item.priority,
+        duration=queue_item.duration,
+        printer=queue_item.printer,
+        sent_to_printer=False,  # Reset to not sent
+        completed=False,  # Reset to not completed
+    )
+
+    # Optionally, copy any other fields you might have in ProductionQueue
+    # new_queue_item.field_name = queue_item.field_name
+    new_queue_item.save()
+
+    #messages.success(request, f"Queue item '{new_queue_item.print_file.filename}' cloned successfully.")
+    return redirect('printer_detail', serial_number=queue_item.printer.serial_number)
+
 class PrinterDetailView(DetailView):
     model = Printer
     template_name = 'bambu/printer_detail.html'  # Adjust this to your template name
