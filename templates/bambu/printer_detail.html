@@ -110,5 +110,11 @@
                 {% endfor %}
             </tbody>
         </table>
+            <!-- Add button to show print queue history -->
+        <div style="margin-top: 10px;">
+            <a href="{% url 'printer_history' serial_number=printer.serial_number %}" class="nes-btn is-primary">
+                Show Print Queue History
+            </a>
+        </div>
     </div>
 {% endblock %}

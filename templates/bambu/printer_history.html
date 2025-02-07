@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <div class="nes-container with-title is-centered">
+        <p class="title">Print Queue History for {{ printer.name }}</p>
+        <table class="nes-table is-bordered is-centered">
+            <thead>
+                <tr>
+                    <th>File</th>
+                    <th>Priority</th>
+                    <th>Duration</th>
+                    <th>Sent Time</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in history_queue %}
+                    <tr>
+                        <td>{{ item.print_file.filename }}</td>
+                        <td>{{ item.priority_str }}</td>
+                        <td>{{ item.print_time }}</td>
+                        <td>{{ item.timestamp }}</td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center">No history available.</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}

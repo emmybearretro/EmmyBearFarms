@@ -34,7 +34,7 @@ EOF
 
 python manage.py shell << EOF
 from bambu.models import PredefinedCommand  # Adjust the import to match your app's structure
-PredefinedCommand.objects.create(name="Print", command='{"print":{"file":"boop.txt"}}', description="Start the print job")
+PredefinedCommand.objects.create(name="Print",can_run_when_blocked=False, command='{"print":{"file":"boop.txt"}}', description="Start the print job")
 PredefinedCommand.objects.create(name="Start Print", command="M24", description="Start the print job")
 PredefinedCommand.objects.create(name="Pause Print", command="M25", description="Pause the current print job")
 PredefinedCommand.objects.create(name="Stop Print", command="M108", description="Stop the print job")

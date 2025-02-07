@@ -105,6 +105,21 @@ class PrinterListView(ListView):
     model = Printer
 
 
+def printer_history_view(request, serial_number):
+    printer = get_object_or_404(Printer, serial_number=serial_number)
+
+    # Fetch only items that have been sent to the printer
+    history_queue = ProductionQueue.objects.filter(
+        printer=printer,
+        sent_to_printer=True
+    ).order_by('-timestamp')  # Order by most recent first
+
+    context = {
+        'printer': printer,
+        'history_queue': history_queue,
+    }
+    return render(request, 'bambu/printer_history.html', context)
+
 class PrinterDetailView(DetailView):
     model = Printer
     template_name = 'bambu/printer_detail.html'  # Adjust this to your template name
@@ -132,13 +147,14 @@ class PrinterDetailView(DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        # Add production queue data
+        # Filter production queue to exclude items that have been sent to printer
         context['production_queue'] = ProductionQueue.objects.filter(
             printer=self.object,
             completed=False,
+            sent_to_printer=False  # Add this filter
         ).order_by('priority', 'timestamp')
 
-        # Add command queue data
+        # Command queue remains as is
         context['command_queue'] = PrinterCommand.objects.filter(
             printer=self.object,
             completed=False,

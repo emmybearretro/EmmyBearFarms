@@ -24,6 +24,7 @@ urlpatterns = [
     path('queue/<str:serial_number>/', views.command_queue_view, name='printer-command-queue'),
     path('printers/<str:serial_number>/send-command/<int:command_id>/', views.send_command_view, name='send_command'),
 path('printers/<str:serial_number>/submitjob/<int:queue_id>/', views.add_to_command_queue, name='add_to_command_queue'),
+    path('printers/<str:serial_number>/history/', views.printer_history_view, name='printer_history'),
 
 
 ]
