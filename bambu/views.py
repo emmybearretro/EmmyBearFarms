@@ -292,3 +292,17 @@ def gcodefile_delete(request, pk):
         gcode_file.delete()
         return redirect('file-list-view')
     return render(request, 'bambu/gcodefile_confirm_delete.html', {'object': gcode_file})
+
+
+def send_command_view(request,serial_number, command_id):
+    printer = get_object_or_404(Printer, serial_number=serial_number)
+    command = get_object_or_404(PrinterCommand, id=command_id, printer=printer)
+
+    # Here you would implement the logic to send the command to the printer
+    # This could involve using Redis or another system to communicate with the printer
+
+    # After sending, you might want to archive or mark the command as completed
+    command.archive()  # Assuming you have such a method
+
+    # Redirect back to the printer detail view
+    return redirect('printer_detail', serial_number=printer.serial_number)

@@ -22,5 +22,6 @@ urlpatterns = [
     path('files/<int:pk>/delete/', views.gcodefile_delete, name='file-delete'),
     path('queue/add/<int:file_id>/', views.add_to_production_queue, name='add_to_queue'),
     path('queue/<str:serial_number>/', views.command_queue_view, name='printer-command-queue'),
+    path('printers/<str:serial_number>/send-command/<int:command_id>/', views.send_command_view, name='send_command'),
 
 ]

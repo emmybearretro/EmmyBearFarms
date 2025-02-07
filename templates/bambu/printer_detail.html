@@ -44,6 +44,7 @@
         </div>
 
         <!-- Command Queue -->
+        <!-- Command Queue -->
         <div class="nes-container with-title" style="text-align: left;">
             <p class="title">Current Command Queue</p>
             <table class="nes-table is-bordered is-centered">
@@ -51,6 +52,7 @@
                     <tr>
                         <th>Position</th>
                         <th>Command</th>
+                        <th>Actions</th>  <!-- Added Actions column -->
                     </tr>
                 </thead>
                 <tbody>
@@ -58,17 +60,23 @@
                         <tr>
                             <td>{{ forloop.counter }}</td>
                             <td>{{ command.predefined_command.name }}</td>
+                            <td>
+                                {% if forloop.first and not printer.blocked %}  <!-- Only show for the first command and if printer isn't blocked -->
+                                    <a href="{% url 'send_command' serial_number=printer.serial_number command_id=command.id %}" class="nes-btn is-primary">
+                                        Send
+                                    </a>
+                                {% endif %}
+                            </td>
                         </tr>
                     {% empty %}
                         <tr>
-                            <td colspan="2" class="text-center">No commands in the queue.</td>
+                            <td colspan="3" class="text-center">No commands in the queue.</td>
                         </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
     </div>
-
     <!-- Production Queue -->
     <div class="nes-container with-title is-centered" style="margin-top: 20px;">
         <p class="title">Current Production Queue</p>
