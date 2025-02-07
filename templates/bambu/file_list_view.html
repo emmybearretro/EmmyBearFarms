@@ -29,11 +29,16 @@
                 </thead>
                 <tbody>
                 {% for gcode_file in gcode_files %}
-                    <tr data-url="{% url 'add_to_queue' gcode_file.id %}" >
-                    <td>
-                        <div>
+                    <tr data-url="{% url 'add_to_queue' gcode_file.id %}"  >
+                    <td style="padding: 20px;">
+
                                 <button class="nes-btn is-warning open-dialog">Queue File</button>
-                            </div></td>
+<br>
+                                <a href="{% url 'file-update' gcode_file.pk %}" class="nes-btn is-warning">Edit File</a>
+<br>
+                                <a href="{% url 'file-delete' gcode_file.pk %}"  class="nes-btn is-warning">Delete File</a>
+
+                    </td>
                         <td>{{ gcode_file.image_tag }}</td>
                         <td> {% for folder in gcode_file.folders.all %}
                                 OO {{ folder.name }} OO

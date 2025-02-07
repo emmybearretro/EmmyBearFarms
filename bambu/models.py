@@ -1,8 +1,10 @@
 import hashlib
 from fileinput import filename
 from io import BytesIO
+
+from django.core.exceptions import ValidationError
 from django.core.files import File
-from django.db import models
+from django.db import models, IntegrityError
 from zipfile import ZipFile
 import xmltodict
 from django.db.models import FileField
@@ -154,6 +156,40 @@ class Folder(models.Model):
     def __str__(self):
         return self.name
 
+
+class PrintSettings(models.Model):
+
+    #we will do default mappings for ams
+    # virtual plate, skipped objects
+    # etc
+    # when sent to a printer, there will be the option to uncheck the defaults
+    bed_leveling = models.BooleanField(default=True)
+    flow_calibration = models.BooleanField(default=True)
+    vibration_calibration = models.BooleanField(default=True)
+    plate_type = models.CharField(
+        max_length=20,  # Adjust based on the longest option
+        choices=PLATE_CHOICES,
+        default="textured_plate",  # Set a default if needed
+    )
+    use_ams = models.BooleanField(default=True)
+    ams_mapping = []
+    skip_objects = []
+
+    # # Basic print settings
+    # bed_temperature = models.FloatField(default=60.0)
+    # nozzle_temperature = models.FloatField(default=200.0)
+    # print_speed = models.FloatField(default=60.0)
+    # layer_height = models.FloatField(default=0.2)
+    # infill_percentage = models.FloatField(default=20.0)
+    # supports = models.BooleanField(default=False)
+    # raft = models.BooleanField(default=False)
+    # Add more fields as needed for your specific printer or slicer settings
+
+    def __str__(self):
+        return f"Settings: {self.bed_temperature}°C bed, {self.nozzle_temperature}°C nozzle"
+
+
+
 class GCodeFile(models.Model):
     timestamp = models.DateTimeField(auto_now_add=True)
     gcode = models.FileField(upload_to='gcode', null=False, blank=False)
@@ -166,6 +202,8 @@ class GCodeFile(models.Model):
     print_time = models.FloatField(null=False, blank=False)
     folders = models.ManyToManyField(Folder)
 
+    print_settings = models.OneToOneField(PrintSettings, on_delete=models.CASCADE, related_name='gcode_file', null=True, blank=True)
+
 
     @property
     def is_latest(self):
@@ -173,7 +211,9 @@ class GCodeFile(models.Model):
         return self.timestamp == latest
 
     def image_tag(self):
-        return mark_safe('<img src="media/%s" width="150" height="150" />' % (self.image.name))
+        k = mark_safe('<img src="/media/%s" width="150" height="150" />' % (self.image.name))
+        i = 0
+        return k
 
     image_tag.short_description = 'Image'
 
@@ -198,6 +238,12 @@ class GCodeFile(models.Model):
         return str(
             f" {self.filename}")
 
+    def save(self, *args, **kwargs):
+        if not self.pk:
+            self.print_settings = PrintSettings.objects.create()
+            self.print_settings.save()
+        super().save(*args, **kwargs)
+
 
 PRIORITY_CHOICES = [
     (0, 'Lowest'),
@@ -221,20 +267,20 @@ class ProductionQueue(models.Model):
     priority = models.IntegerField(choices=PRIORITY_CHOICES, default=0)
     duration = models.FloatField(null=False, blank=False,default=0.0)
     printer = models.ForeignKey(Printer, null=True, blank=True, on_delete=models.CASCADE)
-    bed_leveling = models.BooleanField(default=True, null=False, blank=False)
-    use_ams = models.BooleanField(default=False, null=False, blank=False)
-    plate_type = models.CharField(
-        max_length=20,  # Adjust based on the longest option
-        choices=PLATE_CHOICES,
-        default="textured_plate",  # Set a default if needed
-    )
+
+    print_settings = models.OneToOneField(PrintSettings, on_delete=models.CASCADE, related_name='production_queue', null=True, blank=True)
 
     def __str__(self):
         return str(f"{self.priority} - {self.print_file.filename}")
 
     def save(self, *args, **kwargs):
-        self.duration = self.print_file.print_time
-        super(ProductionQueue, self).save(*args, **kwargs)
+        if self.completed and self.id:
+            # If it's completed, check if any fields have been modified
+            original = ProductionQueue.objects.get(id=self.id)
+            for field in self._meta.fields:
+                if getattr(self, field.name) != getattr(original, field.name):
+                    raise ValidationError(f"Cannot modify {field.name} after the queue is completed.")
+        super().save(*args, **kwargs)
 
 
     @property
@@ -359,18 +405,39 @@ class ThreeMF(models.Model):
                 png = zip_file.read(f"Metadata/plate_{plate['index']}.png")
                 if (md5 != md5_file):
                     print("MD5 mismatch")
-                g = GCodeFile()
-                g.filename = f"{self.file.name}_plate{plate['index']}.gcode"
-                g.gcode.save(md5, File(BytesIO(gcode)), save=False)
-                g.image.save(f"{md5}.png", File(BytesIO(png)), save=False)
-                g.nozzle = plate['nozzle_diameters']
-                g.weight = plate['weight']
-                g.print_time = float(plate['prediction'])
-                g.md5 = md5
-                g.save()
 
+                try:
+                    # Check if the md5 already exists
+                    if GCodeFile.objects.filter(md5=md5).exists():
+                        # MD5 exists, skip creating new GCodeFile
+                        print(f"MD5 {md5} already exists. Skipping creation.")
+                    else:
+                        k = None
+                        try:
+                            k = Folder.objects.order_by('id').first()
+                            if k is None:
+                                k = Folder.objects.create(name="DEFAULT")
+                        except Exception as e:
+                            print(e)
+
+                        g = GCodeFile()
+
+                        g.filename = f"{self.file.name}_plate{plate['index']}.gcode"
+                        g.displayname = f"{self.file.name}"
+                        g.gcode.save(md5, File(BytesIO(gcode)), save=False)
+                        g.image.save(f"{md5}.png", File(BytesIO(png)), save=False)
+                        g.nozzle = plate['nozzle_diameters']
+                        g.weight = plate['weight']
+                        g.print_time = float(plate['prediction'])
+                        g.md5 = md5
+                        g.save()
+                        g.folders.add(k)
+                        g.save()
+                        print(f"New GCodeFile with MD5 {md5} created.")
+                except IntegrityError:
+                    # This catches any unique constraint violation if md5 is set to unique
+                    print(f"Could not create GCodeFile. MD5 {md5} might already be in use.")
         except Exception as e:
             print(f"{e}")
-            pass
         #super(ThreeMF, self).save(*args, **kwargs)
 

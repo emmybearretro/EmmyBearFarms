@@ -9,7 +9,7 @@ from django.views.decorators.http import require_http_methods
 from rest_framework.reverse import reverse_lazy
 
 from bambu import models
-from bambu.forms import FilteredProductionQueueForm, ThreeMFForm, GCodeFileForm
+from bambu.forms import FilteredProductionQueueForm, ThreeMFForm, GCodeFileWithSettingsForm
 from bambu.models import ProductionQueue, Printer, GCodeFile, PLATE_CHOICES
 from django.views.generic import ListView, DetailView, UpdateView
 
@@ -41,7 +41,7 @@ def upload_three_mf(request):
 
     context = {
         'form': form,
-        'gcode_files': latest_gcode_files.values(),
+        'gcode_files': latest_gcode_files,
     }
     return render(request, 'bambu/file_list_view.html', context)
 def index(request):
@@ -231,9 +231,7 @@ def add_to_production_queue(request, file_id):
             priority=priority,
             duration=gcode_file.print_time,
             printer=Printer.objects.get(id=printer_id) if printer_id else None,
-            bed_leveling=bed_leveling,
-            use_ams=use_ams,
-            plate_type=plate_type,
+
         )
 
         # Redirect back to the list of files or another appropriate page
@@ -250,15 +248,21 @@ def add_to_production_queue(request, file_id):
 def gcodefile_update(request, pk):
     gcode_file = get_object_or_404(GCodeFile, pk=pk)
     if request.method == 'POST':
-        form = GCodeFileForm(request.POST, request.FILES, instance=gcode_file)
+        form = GCodeFileWithSettingsForm(request.POST, request.FILES, instance=gcode_file)
         if form.is_valid():
             form.save()
             return redirect('file-list-view')
     else:
-        form = GCodeFileForm(instance=gcode_file)
+        initial = {
+            'bed_leveling': gcode_file.print_settings.bed_leveling,
+            'flow_calibration': gcode_file.print_settings.flow_calibration,
+            'vibration_calibration': gcode_file.print_settings.vibration_calibration,
+            'plate_type': gcode_file.print_settings.plate_type,
+            'use_ams': gcode_file.print_settings.use_ams
+        }
+        form = GCodeFileWithSettingsForm(instance=gcode_file, initial=initial)
     return render(request, 'bambu/gcodefile_form.html', {'form': form})
 
-# Delete
 def gcodefile_delete(request, pk):
     gcode_file = get_object_or_404(GCodeFile, pk=pk)
     if request.method == 'POST':
