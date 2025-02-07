@@ -1,53 +1,100 @@
 {% extends 'base.html' %}
 
 {% block content %}
+    <div class="nes-container is-centered" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+        <!-- Printer Details -->
+        <div class="nes-container with-title" style="text-align: left;">
+            <p class="title">Printer Details</p>
+            <table class="nes-table is-bordered is-centered">
+                <tbody>
+                    <tr>
+                        <td>Name</td>
+                        <td>{{ printer.name }}</td>
+                    </tr>
+                    <tr>
+                        <td>IP Address</td>
+                        <td>{{ printer.ip_address }}</td>
+                    </tr>
+                    <tr>
+                        <td>Serial Number</td>
+                        <td>{{ printer.serial_number }}</td>
+                    </tr>
+                    <tr>
+                        <td>Access Code</td>
+                        <td>{{ printer.access_code }}</td>
+                    </tr>
+                    <tr>
+                        <td>Nozzle Type</td>
+                        <td>{{ printer.state.nozzle_type }}</td>
+                    </tr>
+                    <tr>
+                        <td>Nozzle Diameter</td>
+                        <td>{{ printer.state.nozzle_diameter }}mm</td>
+                    </tr>
+                    <tr>
+                        <td>State</td>
+                        <td>{{ printer.state.gcode_state }}</td>
+                    </tr>
+                    <tr>
+                        <td>Current State</td>
+                        <td>{{ printer.state.current_state }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
 
+        <!-- Command Queue -->
+        <div class="nes-container with-title" style="text-align: left;">
+            <p class="title">Current Command Queue</p>
+            <table class="nes-table is-bordered is-centered">
+                <thead>
+                    <tr>
+                        <th>Position</th>
+                        <th>Command</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for command in command_queue %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ command.predefined_command.name }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="2" class="text-center">No commands in the queue.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
 
-        <div class="tui-window" style="text-align: left;">
-            <fieldset class="tui-fieldset">
-               <!-- <legend class="center">Table hovered</legend> -->
-                <table class="tui-table hovered-cyan" style="width: 700px">
-
+    <!-- Production Queue -->
+    <div class="nes-container with-title is-centered" style="margin-top: 20px;">
+        <p class="title">Current Production Queue</p>
+        <table class="nes-table is-bordered is-centered">
             <thead>
                 <tr>
+                    <th>Position</th>
+                    <th>File</th>
+                    <th>Priority</th>
+                    <th>Duration</th>
                 </tr>
             </thead>
             <tbody>
-                <tr>
-                    <td>Name</td>
-                    <td>{{ printer.name }}</td>
-                </tr>
-                <tr>
-                    <td>IP Address</td>
-                    <td>{{ printer.ip }}</td>
-                </tr>
-                <tr>
-                    <td>Serial Number</td>
-                    <td>{{ printer.serial_number }}</td>
-                </tr>
-                <tr>
-                    <td>Access Code</td>
-                    <td>{{ printer.access_code }}</td>
-                </tr>
-                <tr>
-                    <td>Nozzle Type</td>
-                    <td>{{ printer.nozzle_type }}</td>
-                </tr>
-                <tr>
-                    <td>Nozzle Diameter</td>
-                    <td>{{ printer.nozzle_diameter }}mm</td>
-                </tr>
-                <tr>
-                    <td>State</td>
-                    <td>{{ printer.state }}</td>
-                </tr>
-                <tr>
-                    <td>Current State</td>
-                    <td>{{ printer.current_state }}</td>
-                </tr>
+                {% for item in production_queue %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ item.print_file.filename }}</td>
+                        <td>{{ item.priority_str }}</td>
+                        <td>{{ item.print_time }}</td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center">No items in the queue.</td>
+                    </tr>
+                {% endfor %}
             </tbody>
         </table>
-            </fieldset>
     </div>
-
 {% endblock %}

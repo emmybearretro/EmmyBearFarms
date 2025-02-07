@@ -1,11 +1,10 @@
 {% extends 'base.html' %}
 
 {% block content %}
-    <div class="tui-window" style="text-align: left;">
-        <fieldset class="tui-fieldset">
-        <legend class="center">PRINTERS</legend>
-            <table class="tui-table hovered-cyan" style="width: 700px">
-                <thead>
+    <div class="nes-container with-title is-centered" style="text-align: left;">
+        <p class="title">PRINTERS</p>
+        <table class="nes-table is-bordered is-centered">
+            <thead>
                 <tr>
                     <th scope="col">Name</th>
                     <th scope="col">IP</th>
@@ -15,28 +14,32 @@
                     <th scope="col">State</th>
                     <th scope="col">Current State</th>
                 </tr>
-                </thead>
-                <tbody>
+            </thead>
+            <tbody>
                 {% for printer in printer_list %}
                     <tr>
-                        <td><a class="link-primary" href="{% url 'printer_detail' printer.serial_number %}">{{ printer.name }}</a>
+                        <td>
+                            <a href="{% url 'printer_detail' printer.serial_number %}" class="nes-btn is-primary">
+                                {{ printer.name }}
+                            </a>
                         </td>
                         <td>{{ printer.ip_address }}</td>
-                        <td><a class="link-primary"
-                               href="{% url 'printer_detail' printer.serial_number %}">{{ printer.serial_number }}</a></td>
+                        <td>
+                            <a href="{% url 'printer_detail' printer.serial_number %}" class="nes-btn is-primary">
+                                {{ printer.serial_number }}
+                            </a>
+                        </td>
                         <td>{{ printer.state.nozzle_type }}</td>
                         <td>{{ printer.state.nozzle_diameter }}mm</td>
-                        <td>{{ printer.state.gcode_state}}</td>
+                        <td>{{ printer.state.gcode_state }}</td>
                         <td>{{ printer.state.current_state }}</td>
                     </tr>
                 {% empty %}
                     <tr>
-                        <td colspan="8" class="text-center">No printers available.</td>
+                        <td colspan="7" class="text-center">No printers available.</td>
                     </tr>
                 {% endfor %}
-                </tbody>
-            </table>
-        </fieldset>
+            </tbody>
+        </table>
     </div>
 {% endblock %}
-

@@ -1,4 +1,7 @@
 import hashlib
+from django.db.models.signals import pre_delete
+from django.dispatch import receiver
+from django.utils import timezone
 from fileinput import filename
 from io import BytesIO
 
@@ -108,6 +111,8 @@ class GcodeState(models.TextChoices):
     UNKNOWN = 'UNKNOWN', 'Unknown'
 
 
+
+
 class Printer(models.Model):
     name = models.CharField(max_length=255)
     access_code = models.CharField(max_length=20)
@@ -124,6 +129,63 @@ class Printer(models.Model):
     def connected(self):
         return self.state.current_stage <= 255
 
+    def add_command(self, command):
+        """Add a new command to the end of the queue."""
+        last_position = self.commands.filter(completed=False).aggregate(models.Max('position'))['position__max'] or 0
+        PrinterCommand.objects.create(printer=self, command=command, position=last_position + 1)
+
+    def move_command(self, command_id, new_position):
+        """Move a command to a new position in the queue."""
+        try:
+            command = self.commands.get(id=command_id, completed=False)
+            current_position = command.position
+
+            if current_position == new_position:
+                return  # No need to move if the position is the same
+
+            # Shift commands that are in the way up or down
+            if current_position < new_position:
+                self.commands.filter(completed=False, position__gt=current_position, position__lte=new_position).update(
+                    position=models.F('position') - 1)
+            else:
+                self.commands.filter(completed=False, position__lt=current_position, position__gte=new_position).update(
+                    position=models.F('position') + 1)
+
+            command.position = new_position
+            command.save()
+        except PrinterCommand.DoesNotExist:
+            raise ValueError("Command does not exist or has already been completed")
+
+    def archive_command(self, command_id):
+        """Archive a command by marking it as completed."""
+        command = self.commands.get(id=command_id)
+        command.completed = True
+        command.completed_at = timezone.now()
+        command.save()
+
+        # Shift subsequent commands up
+        self.commands.filter(completed=False, position__gt=command.position).update(position=models.F('position') - 1)
+
+    def next_command(self):
+        """Return the next command in the queue or None if the queue is empty."""
+        try:
+            return self.commands.filter(completed=False).order_by('position').first()
+        except PrinterCommand.DoesNotExist:
+            return None
+
+    def process_command(self, command_id):
+        """Process the command with the given id, archiving it afterwards."""
+        command = self.commands.get(id=command_id)
+
+        # Process command logic here (e.g., send command to printer)
+        # ...
+        if self.blocked and not command.predefined_command.can_run_when_blocked:
+            # Log or handle the situation when a command cannot be executed due to printer being blocked
+            print(f"Cannot execute command {command.predefined_command.name} because the printer is blocked.")
+            return  # or raise an exception, or log this attempt
+
+        # Archive the command
+        self.archive_command(command_id)
 
 
     def __str__(self):
@@ -141,6 +203,86 @@ class Printer(models.Model):
 
         super().save(*args, **kwargs)
 
+class PredefinedCommand(models.Model):
+    name = models.CharField(max_length=255)  # A descriptive name for the command
+    command = models.TextField()  # The actual command text
+    description = models.TextField(blank=True)  # Optional description of what the command does
+    can_run_when_blocked = models.BooleanField(default=False, help_text="Can this command be executed while the printer is blocked?")
+
+
+    def __str__(self):
+        return self.name
+
+
+class PrinterCommand(models.Model):
+    printer = models.ForeignKey(Printer, on_delete=models.CASCADE, related_name='commands')
+    predefined_command = models.ForeignKey(PredefinedCommand, on_delete=models.CASCADE, related_name='uses')
+    position = models.PositiveIntegerField(default=0)
+    completed = models.BooleanField(default=False)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    archived = models.BooleanField(default=False)  # New field to mark if command is archived
+    archived_at = models.DateTimeField(null=True, blank=True)  # Timestamp for when it was archived
+
+    def save(self, *args, **kwargs):
+        if not self.pk or self.position != self._original_position:  # New or changed position
+            # Shift commands down if inserting or moving up
+            if not self.pk or self.position < self._original_position:
+                PrinterCommand.objects.filter(
+                    printer=self.printer,
+                    archived=False,
+                    completed=False,
+                    position__gte=self.position
+                ).exclude(pk=self.pk).update(position=models.F('position') + 1)
+            # Shift commands up if moving down
+            elif self.position > self._original_position:
+                PrinterCommand.objects.filter(
+                    printer=self.printer,
+                    archived=False,
+                    completed=False,
+                    position__gt=self._original_position,
+                    position__lte=self.position
+                ).update(position=models.F('position') - 1)
+
+            # Store the current position for the next save operation
+            self._original_position = self.position
+
+        super().save(*args, **kwargs)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._original_position = self.position  # Store initial position
+
+    def delete(self, using=None, keep_parents=False):
+        self.archive()
+        print("Archived command instead of deleting")
+
+    def archive(self):
+        """Archives the command by marking it as archived and setting the archived_at timestamp."""
+        if not self.archived:
+            self.completed_at = timezone.now()
+            self.completed = True
+            self.archived = True
+            self.archived_at = self.completed_at
+            self.save()
+            # Reorder the queue by updating positions of commands after this one
+            PrinterCommand.objects.filter(
+                printer=self.printer,
+                archived=False,
+                completed=False,
+                position__gt=self.position
+            ).update(position=models.F('position') - 1)
+
+    def __str__(self):
+        return f"Command for {self.printer.name}: {self.predefined_command.name}"
+
+    class Meta:
+        ordering = ['printer', 'position']
+
+@receiver(pre_delete, sender=PrinterCommand)
+def archive_on_delete(sender, instance, **kwargs):
+    instance.archive()
+    print("Archived command")
+    return None
 
 PLATE_CHOICES = [
     ("textured_plate", "Textured plate"),
@@ -274,12 +416,23 @@ class ProductionQueue(models.Model):
         return str(f"{self.priority} - {self.print_file.filename}")
 
     def save(self, *args, **kwargs):
-        if self.completed and self.id:
-            # If it's completed, check if any fields have been modified
+        # First, allow setting 'completed' to True without restrictions
+        if self.completed and not self._state.adding:  # Check if it's not a new object
+            original = ProductionQueue.objects.get(id=self.id)
+            if not original.completed:  # If it was not completed before
+                # Set completed to True without checking other fields
+                self.completed = True
+                super().save(*args, **kwargs)
+                return  # Exit after saving to prevent further validations
+
+        # Now check if this is not a new object and it's already completed
+        if not self._state.adding and self.completed:
             original = ProductionQueue.objects.get(id=self.id)
             for field in self._meta.fields:
                 if getattr(self, field.name) != getattr(original, field.name):
-                    raise ValidationError(f"Cannot modify {field.name} after the queue is completed.")
+                    if field.name != 'completed':  # Allow changes to 'completed' field
+                        raise ValidationError(f"Cannot modify {field.name} after the queue is completed.")
+
         super().save(*args, **kwargs)
 
 
@@ -315,65 +468,6 @@ class ProductionQueue(models.Model):
         }
 
 
-class PrinterQueue(models.Model):
-    # Link to the printer
-    printer = models.ForeignKey(
-        Printer,
-        on_delete=models.CASCADE,
-        related_name='queues'
-    )
-
-    # Link to the production queue item
-    production_queue_item = models.ForeignKey(
-        ProductionQueue,
-        on_delete=models.CASCADE,
-        related_name='printer_queues'
-    )
-
-    # Queue position, to determine order in which items are processed
-    position = models.PositiveIntegerField(default=0)
-
-    # Timestamp when this item was added to the printer's queue
-    added_to_queue = models.DateTimeField(auto_now_add=True)
-
-    # Status of this item in the queue (e.g., 'queued', 'printing', 'completed', 'cancelled')
-    status = models.CharField(
-        max_length=20,
-        choices=[
-            ('queued', 'Queued'),
-            ('printing', 'Printing'),
-            ('completed', 'Completed'),
-            ('cancelled', 'Cancelled'),
-        ],
-        default='queued'
-    )
-
-    # If you want to add more specific data relevant to each printer's queue:
-    # estimated_start_time = models.DateTimeField(null=True, blank=True)
-    # estimated_completion_time = models.DateTimeField(null=True, blank=True)
-
-    def __str__(self):
-        return f"Queue item for {self.printer.name}: {self.production_queue_item.print_file.filename} - Position {self.position}"
-
-    class Meta:
-        ordering = ['printer', 'position']  # Order by printer and then by position in the queue
-        unique_together = (
-        'printer', 'production_queue_item')  # Ensure no duplicate entries for same printer and queue item
-
-    @property
-    def duration(self):
-        return self.production_queue_item.duration_formatted
-
-    @property
-    def priority(self):
-        return self.production_queue_item.priority
-
-    def update_status(self, new_status):
-        if new_status in dict(self._meta.get_field('status').choices).keys():
-            self.status = new_status
-            self.save()
-        else:
-            raise ValueError(f"Invalid status: {new_status}")
 
 
 class ThreeMF(models.Model):

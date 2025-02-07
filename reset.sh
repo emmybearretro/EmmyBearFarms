@@ -25,6 +25,21 @@ rm -rf "static/"
 
 
 python manage.py migrate
+
+python manage.py shell << EOF
+from bambu.models import Folder  # Adjust the import to match your app's structure
+
+Folder.objects.create(name="default")
+EOF
+
+python manage.py shell << EOF
+from bambu.models import PredefinedCommand  # Adjust the import to match your app's structure
+
+PredefinedCommand.objects.create(name="Start Print", command="M24", description="Start the print job")
+PredefinedCommand.objects.create(name="Pause Print", command="M25", description="Pause the current print job")
+PredefinedCommand.objects.create(name="Stop Print", command="M108", description="Stop the print job")
+EOF
+
 export DJANGO_SUPERUSER_PASSWORD="hc"
 python manage.py createsuperuser --noinput --username hc --email hc@hc.local
 

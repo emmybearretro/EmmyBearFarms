@@ -1,7 +1,7 @@
 import json
 
 from django.db.models import Max
-from django.http import Http404
+from django.http import Http404, JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
 import redis
 from django.urls import reverse
@@ -9,8 +9,8 @@ from django.views.decorators.http import require_http_methods
 from rest_framework.reverse import reverse_lazy
 
 from bambu import models
-from bambu.forms import FilteredProductionQueueForm, ThreeMFForm, GCodeFileWithSettingsForm
-from bambu.models import ProductionQueue, Printer, GCodeFile, PLATE_CHOICES
+from bambu.forms import FilteredProductionQueueForm, ThreeMFForm
+from bambu.models import ProductionQueue, Printer, GCodeFile, PLATE_CHOICES, PrinterCommand
 from django.views.generic import ListView, DetailView, UpdateView
 
 
@@ -129,7 +129,23 @@ class PrinterDetailView(DetailView):
         # Optionally, you can limit the queryset here if needed
         return Printer.objects.all()
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
 
+        # Add production queue data
+        context['production_queue'] = ProductionQueue.objects.filter(
+            printer=self.object,
+            completed=False,
+        ).order_by('priority', 'timestamp')
+
+        # Add command queue data
+        context['command_queue'] = PrinterCommand.objects.filter(
+            printer=self.object,
+            completed=False,
+            archived=False
+        ).order_by('position')
+
+        return context
 class ProductionQueueListView(ListView):
     model = ProductionQueue
     def get_queryset(self):
@@ -245,23 +261,30 @@ def add_to_production_queue(request, file_id):
     return render(request, 'bambu/add_to_queue.html', context)
 
 
-def gcodefile_update(request, pk):
-    gcode_file = get_object_or_404(GCodeFile, pk=pk)
-    if request.method == 'POST':
-        form = GCodeFileWithSettingsForm(request.POST, request.FILES, instance=gcode_file)
-        if form.is_valid():
-            form.save()
-            return redirect('file-list-view')
-    else:
-        initial = {
-            'bed_leveling': gcode_file.print_settings.bed_leveling,
-            'flow_calibration': gcode_file.print_settings.flow_calibration,
-            'vibration_calibration': gcode_file.print_settings.vibration_calibration,
-            'plate_type': gcode_file.print_settings.plate_type,
-            'use_ams': gcode_file.print_settings.use_ams
-        }
-        form = GCodeFileWithSettingsForm(instance=gcode_file, initial=initial)
-    return render(request, 'bambu/gcodefile_form.html', {'form': form})
+def command_queue_view(request, serial_number):
+    printer = get_object_or_404(Printer, serial_number=serial_number)
+
+    # Fetch all commands for this printer that are not completed and not archived, ordered by position
+    commands = PrinterCommand.objects.filter(
+        printer=printer,
+        completed=False,
+        archived=False
+    ).order_by('position')
+
+    # Convert the queryset to a list of dictionaries for JSON response
+    queue_data = [
+        {
+            'id': command.id,
+            'position': command.position,
+            'command': command.predefined_command.name,  # Assuming you want the command name, adjust as needed
+        } for command in commands
+    ]
+
+    # If you want to render an HTML template:
+    return render(request, 'bambu/queue_template.html', {'queue': queue_data, 'printer': printer})
+
+    # For an API response, return JSON:
+    #return JsonResponse({'queue': queue_data, 'printer_serial': serial_number})
 
 def gcodefile_delete(request, pk):
     gcode_file = get_object_or_404(GCodeFile, pk=pk)
