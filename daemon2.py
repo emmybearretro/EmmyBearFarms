@@ -69,7 +69,11 @@ def process_command_queue(printer_mqtt:bl.Printer,django_printer:Printer):
             #printer_mqtt.call_method_by_name("start_print", "example.gcode", 1, True, [0], None)
 
             i = 0
-
+            if command.predefined_command.blocks_when_run:
+                logging.error("SAVING")
+                django_printer.blocked = True
+                django_printer.save()
+                logging.error("BLOCKED")
 
             command.completed = True
             command.completed_at = timezone.now()

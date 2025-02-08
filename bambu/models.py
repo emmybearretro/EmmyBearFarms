@@ -208,8 +208,8 @@ class PredefinedCommand(models.Model):
     command = models.TextField()  # The actual command text
     description = models.TextField(blank=True)  # Optional description of what the command does
     can_run_when_blocked = models.BooleanField(default=False, help_text="Can this command be executed while the printer is blocked?")
-
-
+    blocks_when_run = models.BooleanField(default=False, help_text="Block blockable commands after run?")
+    uses_arguments = models.BooleanField(default=False, help_text="Use arguments when executing the command?")
     def __str__(self):
         return self.name
 
@@ -217,6 +217,7 @@ class PredefinedCommand(models.Model):
 class PrinterCommand(models.Model):
     printer = models.ForeignKey(Printer, on_delete=models.CASCADE, related_name='commands')
     predefined_command = models.ForeignKey(PredefinedCommand, on_delete=models.CASCADE, related_name='uses')
+    arguments = models.TextField(blank=True)
     position = models.PositiveIntegerField(default=0)
     completed = models.BooleanField(default=False)
     completed_at = models.DateTimeField(null=True, blank=True)
