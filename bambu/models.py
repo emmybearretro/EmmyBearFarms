@@ -474,20 +474,21 @@ class ThreeMF(models.Model):
 
 
 @receiver(post_save, sender=ThreeMF)
-def process_threemf_after_save(sender, instance, **kwargs):
+def process_threemf_after_save(sender, instance,created ,**kwargs):
     # Check if the file has changed or if this is a new instance
-    file_content = instance.file.read()
-    try:
-        with ZipFile(BytesIO(file_content)) as zip_file:
-            # Here you can process the file as needed
-            # For instance, you might want to validate the content or extract some metadata
-            instance.process_plates_in_threemf(zip_file)
-    except Exception as e:
-        # Handle any exceptions that occur during file processing
-        raise ValidationError(f"Failed to process the 3MF file: {str(e)}")
-    finally:
-        # Ensure the file pointer is reset to the beginning
-        instance.file.seek(0)
+    if created:
+        file_content = instance.file.read()
+        try:
+            with ZipFile(BytesIO(file_content)) as zip_file:
+                # Here you can process the file as needed
+                # For instance, you might want to validate the content or extract some metadata
+                instance.process_plates_in_threemf(zip_file)
+        except Exception as e:
+            # Handle any exceptions that occur during file processing
+            raise ValidationError(f"Failed to process the 3MF file: {str(e)}")
+        finally:
+            # Ensure the file pointer is reset to the beginning
+            instance.file.seek(0)
 
 
 @dataclass
