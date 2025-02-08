@@ -35,7 +35,7 @@
                                 <button class="nes-btn is-warning open-dialog">Queue File</button>
 
                         <br>
-                        
+
                                 <a href="{#   url 'file-update' gcode_file.pk #}#" class="nes-btn is-warning">Edit File</a>
                         <br>
                                 <a href="{% url 'file-delete' gcode_file.pk %}"  class="nes-btn is-warning">Delete File</a>
@@ -47,7 +47,7 @@
                             <br>
                             {% endfor %}
                             {{ gcode_file.filename }}</td>
-                        <td>{{ gcode_file.displayname }}</td>
+                        <td>{{ gcode_file.display_name }}</td>
                         <td>{{ gcode_file.nozzle }}</td>
                         <td colspan="2"
                             class="centered-cell">{{ gcode_file.duration_formatted.hours }}h{{ gcode_file.duration_formatted.minutes }}m{{ gcode_file.duration_formatted.seconds }}s

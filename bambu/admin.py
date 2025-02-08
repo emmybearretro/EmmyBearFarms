@@ -2,13 +2,31 @@ from django.contrib import admin
 from django.utils.safestring import mark_safe
 
 from bambu.models import ThreeMF, GCodeFile, Printer, ProductionQueue, PrinterState, Folder, \
-    PredefinedCommand, PrinterCommand, PrintPlate
+    PredefinedCommand, PrinterCommand, PrintPlate, PlateObject
 
 
 # Register your models here.
+from django.contrib import admin
+from .models import ThreeMF, PrintPlate, GCodeFile, PlateObject  # Assuming PlateObject exists
+
 @admin.register(ThreeMF)
 class ThreeMFAdmin(admin.ModelAdmin):
-    pass
+    list_display = ('id', 'file')
+    readonly_fields = ('file',)  # Make the file field read-only since it's the primary key
+
+    def has_add_permission(self, request):
+        return True
+
+    def has_change_permission(self, request, obj=None):
+        return True
+
+    def has_delete_permission(self, request, obj=None):
+        return True
+
+    def get_readonly_fields(self, request, obj=None):
+        if obj:  # If we're editing an existing object
+            return self.readonly_fields + ('file',)  # Make 'file' read-only on edit
+        return self.readonly_fields
 
 @admin.register(Printer)
 class PrinterAdmin(admin.ModelAdmin):
