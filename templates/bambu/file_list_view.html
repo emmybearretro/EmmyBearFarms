@@ -22,7 +22,6 @@
                     <th>Action</th>
                     <th>Image</th>
                     <th>FileName</th>
-                    <th>Revision</th>
                     <th>Nozzle</th>
                     <th>Duration</th>
                 </tr>
@@ -46,8 +45,7 @@
                                 OO {{ folder.name }} OO
                             <br>
                             {% endfor %}
-                            {{ gcode_file.filename }}</td>
-                        <td>{{ gcode_file.display_name }}</td>
+                            {{ gcode_file.print_plate.three_mf.file.name }} / {{ gcode_file.filename }}</td>
                         <td>{{ gcode_file.nozzle }}</td>
                         <td colspan="2"
                             class="centered-cell">{{ gcode_file.duration_formatted.hours }}h{{ gcode_file.duration_formatted.minutes }}m{{ gcode_file.duration_formatted.seconds }}s

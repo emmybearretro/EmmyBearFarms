@@ -695,6 +695,12 @@ class PlateConfigParser:
                         plate_objects = PlateConfigParser.parse_objects_from_plate(slice_plate_elements, plate)
                         slice_metadata = PlateConfigParser.metadata_to_dict(slice_plate_elements.findall('metadata'))
                         PlateConfigParser.create_gcode_files(slice_metadata)
+
+                        g.nozzle = slice_metadata.get('nozzle_diameters', "0.4")
+                        g.weight = slice_metadata.get('weight', '0')
+                        g.print_time = float(slice_metadata.get('prediction', "1000.0"))
+                        g.save()
+
                         all_objects.extend(plate_objects)
                         continue
 
