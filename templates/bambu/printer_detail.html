@@ -85,26 +85,26 @@
     <div class="nes-container with-title" style="flex: 1; min-height: 200px; max-width: 60%">
         <p class="title">Current Command Queue</p>
         <div style="overflow-y: auto; height: 100%;">
-            <table class="nes-table is-bordered is-centered" style="width: 80%;">
-                           <thead>
-                <tr>
-                    <th>Position</th>
-                    <th>Command</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for command in command_queue %}
-                    <tr>
-                        <td>{{ forloop.counter }}</td>
-                        <td>{{ command.predefined_command.name }}</td>
-                    </tr>
-                {% empty %}
-                    <tr>
-                        <td colspan="3" class="text-center">No commands in the queue.</td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-            </table>
+            <table id="commandQueueTable" class="nes-table is-bordered is-centered" style="width: 80%;">
+    <thead>
+        <tr>
+            <th>Position</th>
+            <th>Command</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for command in command_queue %}
+            <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>{{ command.predefined_command.name }}</td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="2" class="text-center">No commands in the queue.</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
         </div>
     </div>
 </div>
@@ -152,7 +152,6 @@
         </div>
     </div>
 
-
 <script>
     // Fetch CSRF token from cookie
     function getCookie(name) {
@@ -172,15 +171,14 @@
 
     const csrftoken = getCookie('csrftoken');
 
-    function handleButtonAction(action,additionalData  = {}) {
+    function handleButtonAction(action, additionalData = {}) {
         fetch(`/printers/{{ printer.serial_number }}/action/${action}/`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': csrftoken, // Include the CSRF token in the headers
-                // Include any authentication headers here if needed
+                'X-CSRFToken': csrftoken,
             },
-            body: JSON.stringify(additionalData)  // Convert the data to JSON string
+            body: JSON.stringify(additionalData)
         })
         .then(response => {
             if (!response.ok) {
@@ -190,12 +188,88 @@
         })
         .then(data => {
             console.log('Action executed:', data);
+            // After any action, we might want to update the state immediately
+            updatePrinterState();
         })
         .catch(error => {
             console.error('Error executing action:', error);
             alert('An error occurred while executing the action.');
         });
     }
-</script>
 
+    function updatePrinterState() {
+        fetch('/api/printer/{{ printer.serial_number }}/state') // Adjust the URL to match your API endpoint for printer state
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Update live stats
+                let dynamicInfo = '';
+                if('percentage' in data){
+                    dynamicInfo += `<i class="mdi mdi-printer-3d-nozzle"></i>${data.percentage}%<br>`;
+                }
+                if('nozzle_temperature' in data){
+                    dynamicInfo += `<i class="mdi mdi-thermometer"></i>${data.nozzle_temperature}°C<br>`;
+                }
+                document.getElementById('dynamicStatusInfo').innerHTML = dynamicInfo;
+
+            })
+            .catch(error => {
+                console.error('There was a problem with the fetch operation:', error.message);
+                document.getElementById('dynamicStatusInfo').textContent = 'Error fetching status';
+            });
+    }
+
+        function fetchCommandQueue() {
+        fetch('/printers/{{ printer.serial_number }}/queue') // Adjust the URL to match your API endpoint for printer state
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Update live stats
+                updateCommandQueue(data.command_queue);
+
+            })
+            .catch(error => {
+                console.error('There was a problem with the fetch operation:', error.message);
+                document.getElementById('dynamicStatusInfo').textContent = 'Error fetching status';
+            });
+    }
+
+
+    function updateCommandQueue(newQueue) {
+        const queueTable = document.querySelector('#commandQueueTable tbody');
+        if (queueTable) {
+            queueTable.innerHTML = ''; // Clear existing commands
+            if (newQueue && newQueue.length > 0) {
+                newQueue.forEach((command, index) => {
+                    let row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${index + 1}</td>
+                        <td>${command.command}</td>
+                    `;
+                    queueTable.appendChild(row);
+                });
+            } else {
+                let emptyRow = document.createElement('tr');
+                emptyRow.innerHTML = '<td colspan="2" class="text-center">No commands in the queue.</td>';
+                queueTable.appendChild(emptyRow);
+            }
+        }
+    }
+
+    // Initial update
+    updatePrinterState();
+    fetchCommandQueue();
+    // Set interval for periodic updates (e.g., every 5 seconds)
+    setInterval(updatePrinterState, 5000);
+    setInterval(fetchCommandQueue, 1000);
+
+</script>
 {% endblock %}

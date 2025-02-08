@@ -377,10 +377,10 @@ def command_queue_view(request, serial_number):
     ]
 
     # If you want to render an HTML template:
-    return render(request, 'bambu/queue_template.html', {'queue': queue_data, 'printer': printer})
+    #return render(request, 'bambu/queue_template.html', {'queue': queue_data, 'printer': printer})
 
     # For an API response, return JSON:
-    #return JsonResponse({'queue': queue_data, 'printer_serial': serial_number})
+    return JsonResponse({'command_queue': list(queue_data), 'printer_serial': serial_number})
 
 def gcodefile_delete(request, pk):
     gcode_file = get_object_or_404(GCodeFile, pk=pk)
