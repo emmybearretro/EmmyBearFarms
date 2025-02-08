@@ -396,17 +396,55 @@ def add_to_command_queue(request, serial_number, queue_id):
         raise Http404("This queue item cannot be sent to the command queue.")
 
     # Assuming there's a predefined command for "Print" or similar action
-    print_command = get_object_or_404(PredefinedCommand, name="Print")  # Adjust the name as per your setup
-
+    print_command = get_object_or_404(PredefinedCommand, name="Start Print")  # Adjust the name as per your setup
+    upload_command = get_object_or_404(PredefinedCommand, name="Upload File")
     # Create a new command in the command queue based on the production queue item
     last_position = \
     PrinterCommand.objects.filter(printer=printer, completed=False, archived=False).aggregate(models.Max('position'))[
         'position__max'] or 0
+
+    # "serial_number": job.printer.serial_number,
+    # "filepath": job.print_file.gcode.path,
+    # "filename": job.print_file.filename,
+    # "plate_number": 1,  # we always use 1 because we split all plates into their own files.
+    # "bed_leveling": job.bed_leveling,
+    # "bed_type": job.bed_type,
+    # "use_ams": job.use_ams,
+    # "ams_mapping": [],
+    # "skip_objects": []
+
+    #first we need make an upload file command
+    arguments = {
+    "filepath": queue_item.print_file.gcode.path,
+    "filename": queue_item.print_file.filename,
+        "upload_file": queue_item.print_file.print_plate.three_mf.file.name.split("/")[-1],
+    }
     PrinterCommand.objects.create(
+        predefined_command=upload_command,
+        position=last_position + 1,
         printer=printer,
-        predefined_command=print_command,
-        position=last_position + 1
+        arguments=json.dumps(arguments),
     )
+
+    args = {}
+
+    # def start_print(self,filename: str,
+    #                     plate_number: int,
+    #                     bed_leveling: bool = True,
+    #                     flow_calibration: bool = False,
+    #                     vibration_calibration: bool = False,
+    #                     bed_type:str = "textured_plate",
+    #                     use_ams: bool = True,
+    #                     ams_mapping: list[int] = [0],
+    #                     skip_objects: list[int] | None = None,
+    #                     ) -> bool:
+
+    # PrinterCommand.objects.create(
+    #     printer=printer,
+    #     predefined_command=print_command,
+    #     position=last_position + 1,
+    #     arguments=args
+    # )
 
     # Optionally, mark the queue item as sent to printer or similar status update
     queue_item.sent_to_printer = True

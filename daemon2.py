@@ -2,6 +2,9 @@ import os
 import sys
 import time
 import json
+from io import BytesIO
+from zipfile import ZipFile,ZIP_DEFLATED
+
 import bambulabs_api as bl
 import configparser
 import logging
@@ -33,6 +36,27 @@ def make_hashable(obj):
     else:
         return str(obj)  # Convert any other types to strings
 
+def create_zip_archive_in_memory(
+        text_content: str,
+        text_file_name: str = 'file.txt') -> BytesIO:
+    """
+    Create a zip archive in memory
+
+    Args:
+        text_content (str): content of the text file
+        text_file_name (str, optional): location of the text file.
+            Defaults to 'file.txt'.
+
+    Returns:
+        io.BytesIO: zip archive in memory
+    """
+    zip_buffer = BytesIO()
+    with ZipFile(zip_buffer, 'w', ZIP_DEFLATED) as zipf:
+        zipf.writestr(text_file_name, text_content)
+    zip_buffer.seek(0)
+    return zip_buffer
+
+
 def process_command_queue(printer_mqtt:bl.Printer,django_printer:Printer):
     command = None
     try:
@@ -61,8 +85,21 @@ def process_command_queue(printer_mqtt:bl.Printer,django_printer:Printer):
             logging.info("Running command: %s", command)
             #do the command
             cmdtxt = command.predefined_command.command
-            i = 0
-            printer_mqtt.call_method_by_name(cmdtxt)
+            arguments = json.loads(command.arguments)
+            if cmdtxt == "upload_file":
+                #arguments are for us to read a file
+                of = open(arguments['filepath'])
+                gcode_text = of.read()
+                of.close()
+                zf = create_zip_archive_in_memory( gcode_text,'Metadata/plate_1.gcode')
+                i = 0
+                arguments = {
+                    "file": zf,
+                    "filename": arguments["upload_file"],
+                }
+
+
+            printer_mqtt.call_method_by_name(cmdtxt,**arguments)
 
             #printer_mqtt.call_method_by_name("start_print", "example.gcode", 1, True, [0], None)
 
