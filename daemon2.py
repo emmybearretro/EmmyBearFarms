@@ -5,6 +5,8 @@ import json
 import bambulabs_api as bl
 import configparser
 import logging
+
+import django.db.models
 from django.conf import settings
 from django import setup
 from django.db import connection
@@ -21,7 +23,6 @@ from bambu.models import Printer, PrinterCommand, PrinterState
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-
 def make_hashable(obj):
     if isinstance(obj, (str, int, float, bool, type(None))):
         return obj
@@ -32,11 +33,11 @@ def make_hashable(obj):
     else:
         return str(obj)  # Convert any other types to strings
 
-def process_command_queue(printer):
+def process_command_queue(printer_mqtt:bl.Printer,django_printer:Printer):
     command = None
     try:
         command = PrinterCommand.objects.filter(
-            printer=printer,
+            printer=django_printer,
             completed=False,
             archived=False
         ).order_by('position').first()
@@ -50,7 +51,7 @@ def process_command_queue(printer):
         if command.predefined_command.can_run_when_blocked:
             logging.info("Command is being run, even if we are blocked")
             can_run = True
-        elif printer.blocked == False:
+        elif django_printer.blocked == False:
             logging.info("Printer is not blocked")
             can_run = True
         else:
@@ -59,6 +60,17 @@ def process_command_queue(printer):
         if can_run:
             logging.info("Running command: %s", command)
             #do the command
+            cmdtxt = command.predefined_command.command
+            i = 0
+            cmd = json.loads( cmdtxt )
+            for k, v in cmd.items():
+                printer_mqtt.call_method_by_name(k,**v)
+
+            #printer_mqtt.call_method_by_name("start_print", "example.gcode", 1, True, [0], None)
+
+            i = 0
+
+
             command.completed = True
             command.completed_at = timezone.now()
             command.archived = True
@@ -68,7 +80,7 @@ def process_command_queue(printer):
 
     connection.close()  # Close connection after operations
 
-def update_printer_state(printer, state_values:dict):
+def update_printer_state(printer:Printer, state_values:dict):
     try:
         state_values.pop('current_state') #it's a property
         state = printer.state
@@ -100,7 +112,7 @@ def main():
         return
 
     # Initialize and connect to printer
-    printer = bl.Printer(ip_address=ip, access_code=access, serial=sn, camera_thread=camera)
+    printer:bl.Printer = bl.Printer(ip_address=ip, access_code=access, serial=sn, camera_thread=camera)
     printer.connect()
 
     django_printer, created = Printer.objects.get_or_create(
@@ -148,13 +160,14 @@ def main():
             try:
                 django_printer = Printer.objects.get(serial_number=sn)
                 update_printer_state(django_printer, state_values)
+
                 logging.info("Printer state updated.")
             except Exception as e:
                 logging.error(f"Error updating printer state: {e}")
 
         old_json = set_of_values
 
-        process_command_queue(django_printer)
+        process_command_queue(printer,django_printer)
         # Here you might want to check printer state or perform other tasks
         time.sleep(5)  # Sleep for a bit to avoid constant polling; adjust as needed
 
