@@ -73,5 +73,36 @@
     </form>
   </dialog>
     </section>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+  var dialog = document.getElementById('dialog-default');
+  var confirmButton = document.getElementById('confirmPrint');
+
+  // Function to handle opening the dialog with the correct URL data
+  document.querySelectorAll('.open-dialog').forEach(button => {
+    button.addEventListener('click', function(e) {
+      e.preventDefault();
+      // Store the URL for the confirm action
+      dialog.dataset.url = this.closest('tr').dataset.url;
+      dialog.showModal();
+    });
+  });
+
+  // Handle the confirm action by redirecting to the stored URL
+  confirmButton.addEventListener('click', function(e) {
+    if (dialog.dataset.url) {
+      window.location.href = dialog.dataset.url;
+    }
+    dialog.close();
+  });
+
+  // Cancel just closes the dialog
+  dialog.querySelector('.nes-btn:not(.is-primary)').addEventListener('click', function() {
+    dialog.close();
+  });
+});
+</script>
+
 {% endblock %}
 
