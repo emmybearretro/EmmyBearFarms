@@ -62,9 +62,7 @@ def process_command_queue(printer_mqtt:bl.Printer,django_printer:Printer):
             #do the command
             cmdtxt = command.predefined_command.command
             i = 0
-            cmd = json.loads( cmdtxt )
-            for k, v in cmd.items():
-                printer_mqtt.call_method_by_name(k,**v)
+            printer_mqtt.call_method_by_name(cmdtxt)
 
             #printer_mqtt.call_method_by_name("start_print", "example.gcode", 1, True, [0], None)
 

@@ -8,6 +8,11 @@
 
     <!--<link rel="stylesheet" href="{% static 'tuicss.min.css' %}">-->
 <!--<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" integrity="sha512-Evv84Mr4kqVGRNSgIGL/F/aIDqQb7xQ2vcrdIwxfjThSH8CSR7PBEakCr51Ck+w+/U6swU2Im1vVX0SVk9ABhg==" crossorigin="anonymous" referrerpolicy="no-referrer" />-->
+
+
+
+<link href="https://cdn.materialdesignicons.com/5.4.55/css/materialdesignicons.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" integrity="sha512-Evv84Mr4kqVGRNSgIGL/F/aIDqQb7xQ2vcrdIwxfjThSH8CSR7PBEakCr51Ck+w+/U6swU2Im1vVX0SVk9ABhg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <link href="https://fonts.googleapis.com/css?family=Press+Start+2P" rel="stylesheet">
     <link href="https://unpkg.com/nes.css/css/nes.css" rel="stylesheet" />
         <style>
@@ -50,36 +55,6 @@
 
 {% block content %}
 {% endblock %}
-
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-  var dialog = document.getElementById('dialog-default');
-  var confirmButton = document.getElementById('confirmPrint');
-
-  // Function to handle opening the dialog with the correct URL data
-  document.querySelectorAll('.open-dialog').forEach(button => {
-    button.addEventListener('click', function(e) {
-      e.preventDefault();
-      // Store the URL for the confirm action
-      dialog.dataset.url = this.closest('tr').dataset.url;
-      dialog.showModal();
-    });
-  });
-
-  // Handle the confirm action by redirecting to the stored URL
-  confirmButton.addEventListener('click', function(e) {
-    if (dialog.dataset.url) {
-      window.location.href = dialog.dataset.url;
-    }
-    dialog.close();
-  });
-
-  // Cancel just closes the dialog
-  dialog.querySelector('.nes-btn:not(.is-primary)').addEventListener('click', function() {
-    dialog.close();
-  });
-});
-</script>
 
     </body>
 </html>

@@ -141,6 +141,65 @@ def clone_queue_item(request, queue_id):
     #messages.success(request, f"Queue item '{new_queue_item.print_file.filename}' cloned successfully.")
     return redirect('printer_detail', serial_number=queue_item.printer.serial_number)
 
+
+@require_http_methods(["POST"])
+def printer_action(request, serial_number, action,):
+    try:
+        printer = get_object_or_404(Printer,serial_number=serial_number)
+        data = None
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON data'}, status=400)
+
+        predefined_command = None
+
+
+        if action == 'start':
+            # Code to start the printer
+            result = {"status": "started"}
+        elif action == 'pause':
+            # Code to pause the printer
+            result = {"status": "paused"}
+        # ... handle other actions similarly
+        elif action == 'stop_print':
+            # Code for emergency stop
+           predefined_command =  PredefinedCommand.objects.get(command=action)
+        else:
+            return JsonResponse({"error": "Invalid action"}, status=400)
+
+
+        # Calculate the next position for the new command
+
+
+        # Create the new PrinterCommand
+        new_command = PrinterCommand.objects.create(
+            printer=printer,
+            predefined_command=predefined_command,
+            position=0,
+            completed=False,
+            completed_at=None  # Not completed yet
+        )
+
+
+
+    except Printer.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Printer not found.'}, status=404)
+    except PredefinedCommand.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Command not found.'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+    # Return a JSON response indicating success
+    return JsonResponse({
+        'success': True,
+        'message': 'Command added to queue.',
+        'command_id': new_command.id
+    }, status=201)
+
+
+
 class PrinterDetailView(DetailView):
     model = Printer
     template_name = 'bambu/printer_detail.html'  # Adjust this to your template name

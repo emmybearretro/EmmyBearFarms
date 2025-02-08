@@ -1,101 +1,114 @@
 {% extends 'base.html' %}
 
+
+
 {% block content %}
+<style>
+
+#dynamicStatusInfo i {
+    font-size: 24px;
+    vertical-align: baseline;
+    margin-right: 5px;
+}
+
+</style>
+
     <div class="nes-container is-centered" style="display: grid; grid-template-columns: 1fr; gap: 20px;">
         <!-- Printer Details, Controls, and Command Queue -->
-        <div class="nes-container with-title" style="text-align: left;">
-            <p class="title">Printer Details, Controls, and Command Queue</p>
-            <div style="display: flex; flex-direction: row; gap: 20px;">
-                <!-- Printer Details Table -->
-                <table class="nes-table is-bordered is-centered" style="flex: 1;">
-                    <tbody>
-                        <tr>
-                            <td>Name</td>
-                            <td>{{ printer.name }}</td>
-                        </tr>
-                        <tr>
-                            <td>IP Address</td>
-                            <td>{{ printer.ip_address }}</td>
-                        </tr>
-                        <tr>
-                            <td>Serial Number</td>
-                            <td>{{ printer.serial_number }}</td>
-                        </tr>
-                        <tr>
-                            <td>Access Code</td>
-                            <td>{{ printer.access_code }}</td>
-                        </tr>
-                        <tr>
-                            <td>Nozzle Type</td>
-                            <td>{{ printer.state.nozzle_type }}</td>
-                        </tr>
-                        <tr>
-                            <td>Nozzle Diameter</td>
-                            <td>{{ printer.state.nozzle_diameter }}mm</td>
-                        </tr>
-                        <tr>
-                            <td>State</td>
-                            <td>{{ printer.state.gcode_state }}</td>
-                        </tr>
-                        <tr>
-                            <td>Current State</td>
-                            <td>{{ printer.state.current_state }}</td>
-                        </tr>
-                    </tbody>
-                </table>
 
-                <!-- Printer Controls and Command Queue -->
-                <div style="display: flex; flex-direction: column; gap: 10px; flex: 1; min-width: 200px;">
-                    <!-- Printer Controls -->
-                    <div style="display: flex; flex-direction: column; gap: 10px;">
-                        <div style="display: flex; gap: 10px;">
-                            <button class="nes-btn is-primary">Start</button>
-                            <button class="nes-btn is-warning">Pause</button>
-                            <button class="nes-btn is-error">Stop</button>
-                        </div>
-                        <div style="display: flex; gap: 10px;">
-                            <button class="nes-btn">Home</button>
-                            <button class="nes-btn">Calibrate</button>
-                            <button class="nes-btn is-error">Emergency</button>
-                        </div>
-                    </div>
 
-                    <!-- Current Command Queue -->
-                    <div class="nes-container with-title" style="margin-top: 10px; flex: 1;">
-                        <p class="title">Current Command Queue</p>
-                        <table class="nes-table is-bordered is-centered">
-                            <thead>
-                                <tr>
-                                    <th>Position</th>
-                                    <th>Command</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for command in command_queue %}
-                                    <tr>
-                                        <td>{{ forloop.counter }}</td>
-                                        <td>{{ command.predefined_command.name }}</td>
-                                        <td>
-                                            {% if forloop.first and not printer.blocked %}
-                                                <a href="{% url 'send_command' serial_number=printer.serial_number command_id=command.id %}" class="nes-btn is-primary">
-                                                    Send
-                                                </a>
-                                            {% endif %}
-                                        </td>
-                                    </tr>
-                                {% empty %}
-                                    <tr>
-                                        <td colspan="3" class="text-center">No commands in the queue.</td>
-                                    </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+<div class="nes-container is-centered with-title" style="gap:5px;">
+<p class="title">BOOP</p>
+    <div style="display: flex; flex-direction: row; gap: 5px;">
+    <!-- Printer Details -->
+        <div class="nes-container with-title" style="flex: 1; min-width: 200px; max-width: 30%;">
+        <p class="title">Printer Info</p>
+<table class="nes-table is-bordered is-centered" style="flex: 1;">
+    <tbody>
+        <tr>
+            <td style="text-align: right; width: 5ch;">Name</td>
+            <td style="text-align: left;">{{ printer.name }}</td>
+        </tr>
+        <tr>
+            <td style="text-align: right; width: 9ch;">IP Address</td>
+            <td style="text-align: left;">{{ printer.ip_address }}</td>
+        </tr>
+        <tr>
+            <td style="text-align: right; width: 13ch;">Serial Number</td>
+            <td style="text-align: left;">{{ printer.serial_number }}</td>
+        </tr>
+        <tr>
+            <td style="text-align: right; width: 11ch;">Access Code</td>
+            <td style="text-align: left;">{{ printer.access_code }}</td>
+        </tr>
+        <tr>
+            <td style="text-align: right; width: 11ch;">Nozzle Type</td>
+            <td style="text-align: left;">{{ printer.state.nozzle_type }}</td>
+        </tr>
+        <tr>
+            <td style="text-align: right; width: 14ch;">Nozzle Diameter</td>
+            <td style="text-align: left;">{{ printer.state.nozzle_diameter }}mm</td>
+        </tr>
+
+    </tbody>
+</table>
             </div>
+    <!-- Printer Controls -->
+        <div style="flex: 1; max-width: 50%;">
+    <div class="nes-container with-title" style="flex: 1; min-width: 200px; ">
+        <p class="title">Printer Controls</p>
+        <table class="nes-table is-bordered is-centered">
+            <tbody>
+        <tr>
+            <td><button class="nes-btn is-primary is-disabled" onclick="handleButtonAction('start')">Start</button></td>
+            <td><button class="nes-btn is-warning" onclick="handleButtonAction('pause_print')">Pause</button></td>
+            <td><button class="nes-btn is-error" onclick="handleButtonAction('stop_print')">Stop</button></td>
+        </tr>
+        <tr>
+            <td><button class="nes-btn" onclick="handleButtonAction('home_printer')">Home</button></td>
+            <td><button class="nes-btn" onclick="handleButtonAction('calibrate_printer')">Calibrate</button></td>
+            <td><button class="nes-btn is-error" onclick="handleButtonAction('stop_print')">Emergency</button></td>
+        </tr>
+            </tbody>
+        </table>
+    </div>
+            <div class="nes-container with-title" style="margin-top: 10px;">
+    <p class="title">Live Stats</p>
+    <div id="dynamicStatusInfo" style="padding: 10px; background-color: #f0f0f0; border: 1px solid #ccc; border-radius: 5px;">
+        Initial Value
+    </div>
+</div>
+
         </div>
 
+    <!-- Command Queue -->
+    <div class="nes-container with-title" style="flex: 1; min-height: 200px; max-width: 60%">
+        <p class="title">Current Command Queue</p>
+        <div style="overflow-y: auto; height: 100%;">
+            <table class="nes-table is-bordered is-centered" style="width: 80%;">
+                           <thead>
+                <tr>
+                    <th>Position</th>
+                    <th>Command</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for command in command_queue %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ command.predefined_command.name }}</td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="3" class="text-center">No commands in the queue.</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</div>
         <!-- Production Queue -->
         <div class="nes-container with-title is-centered">
             <p class="title">Current Production Queue</p>
@@ -138,4 +151,51 @@
             </div>
         </div>
     </div>
+
+
+<script>
+    // Fetch CSRF token from cookie
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    const csrftoken = getCookie('csrftoken');
+
+    function handleButtonAction(action,additionalData  = {}) {
+        fetch(`/printers/{{ printer.serial_number }}/action/${action}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken, // Include the CSRF token in the headers
+                // Include any authentication headers here if needed
+            },
+            body: JSON.stringify(additionalData)  // Convert the data to JSON string
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Action executed:', data);
+        })
+        .catch(error => {
+            console.error('Error executing action:', error);
+            alert('An error occurred while executing the action.');
+        });
+    }
+</script>
+
 {% endblock %}
