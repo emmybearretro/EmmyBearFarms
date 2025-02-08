@@ -127,7 +127,8 @@
                         {% for item in production_queue %}
                             <tr>
                                 <td>{{ forloop.counter }}</td>
-                                <td>{{ item.print_file.filename }}</td>
+                                <td>{{ item.print_file.image_tag }}
+                                    {{ item.print_file.print_plate.three_mf.file.name}}  / {{ item.print_file.filename }}</td>
                                 <td>{{ item.priority_str }}</td>
                                 <td>{{ item.print_time }}</td>
                                 <td>

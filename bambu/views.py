@@ -28,16 +28,8 @@ def upload_three_mf(request):
         form = ThreeMFForm()
 
     # Group by filename and get the latest one per group based on timestamp
-    latest_files = GCodeFile.objects.values('filename').annotate(
-        latest_timestamp=Max('timestamp')
-    ).values('filename', 'latest_timestamp')
 
-    # Now, fetch the actual GCodeFile objects that match these latest timestamps
-    latest_gcode_files = GCodeFile.objects.filter(
-        timestamp__in=[file['latest_timestamp'] for file in latest_files],
-        filename__in=[file['filename'] for file in latest_files]
-    )
-
+    latest_gcode_files = GCodeFile.objects.order_by('-timestamp')[:3]
 
     context = {
         'form': form,
@@ -301,16 +293,8 @@ class FileListView(ListView):
 
     def get_queryset(self):
         all_files = GCodeFile.objects.all()
-
-        # Dictionary to hold the latest revision of each file by filename
-        latest_files = {}
-
-        for file in all_files:
-            if file.filename not in latest_files or file.revision > latest_files[file.filename].revision:
-                latest_files[file.filename] = file
-
         # Return the values of the dictionary which are the latest GCodeFile objects
-        return list(latest_files.values())
+        return list(all_files.values())
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
