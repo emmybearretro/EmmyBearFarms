@@ -1,5 +1,35 @@
 {% extends 'base.html' %}
 
+{% block extra_styles %}
+<style>
+    .large-icon {
+    font-size: 24px; /* Adjust this value for the size you want. 24px is fairly large for icons */
+    vertical-align: middle; /* This will align the icon with the text */
+}
+        /* Ensure the table cells are not too narrow */
+    .nes-table th, .nes-table td {
+        min-width: 50px; /* Base minimum width */
+    }
+
+    /* Specific width for the Nozzle column */
+    .nozzle-column {
+        width: 120px; /* Adjust this value to make it just slightly longer than "1.0 mm" */
+    }
+        .duration-column {
+        width: 180px; /* Adjust this value to make it just slightly longer than "1.0 mm" */
+    }
+
+        .image-column {
+            width: 155px;
+        }
+
+        .action-column {
+            width: 200px;
+        }
+
+    </style>
+{% endblock %}
+
 {% block content %}
 
     <section>
@@ -19,11 +49,11 @@
             <table class="nes-table is-centered is-bordered" style="width: 100%">
                 <thead>
                 <tr>
-                    <th>Action</th>
-                    <th>Image</th>
-                    <th>FileName</th>
-                    <th>Nozzle</th>
-                    <th>Duration</th>
+                    <th class="action-column">Action</th>
+                    <th class="image-column"></th>
+                    <th><span class="mdi mdi-file-outline large-icon"></span></th>
+                    <th class="nozzle-column"> <span class="mdi mdi-printer-3d-nozzle large-icon"></span></th>
+                    <th class="duration-column"><span class="mdi mdi-timer-outline large-icon"></span></th>
                 </tr>
                 </thead>
                 <tbody>
@@ -46,9 +76,8 @@
                             <br>
                             {% endfor %}
                             {{ gcode_file.print_plate.three_mf.file.name }} / {{ gcode_file.filename }}</td>
-                        <td>{{ gcode_file.nozzle }}</td>
-                        <td colspan="2"
-                            class="centered-cell">{{ gcode_file.duration_formatted.hours }}h{{ gcode_file.duration_formatted.minutes }}m{{ gcode_file.duration_formatted.seconds }}s
+                        <td class="nozzle-column">{{ gcode_file.nozzle }} mm</td>
+                        <td class="centered-cell duration-column">{{ gcode_file.duration_formatted.hours }}h{{ gcode_file.duration_formatted.minutes }}m{{ gcode_file.duration_formatted.seconds }}s
                         </td>
                     </tr>
                 {% empty %}
