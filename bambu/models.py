@@ -1,10 +1,12 @@
 import hashlib
-from django.db.models.signals import pre_delete
+import xml.etree.ElementTree as ET
+from django.db.models.signals import pre_delete, pre_save, post_save
 from django.dispatch import receiver
 from django.utils import timezone
 from fileinput import filename
 from io import BytesIO
-
+from dataclasses import dataclass
+from typing import List, Dict
 from django.core.exceptions import ValidationError
 from django.core.files import File
 from django.db import models, IntegrityError
@@ -469,70 +471,262 @@ class ProductionQueue(models.Model):
         }
 
 
+class GCodeObject(models.Model):
+    gcode_file = models.ForeignKey(GCodeFile, on_delete=models.CASCADE, related_name='objects')
+    # Object properties from the GCode/3MF file
+    object_id = models.CharField(max_length=255)  # Unique identifier within the file
+    name = models.CharField(max_length=255)
+    position_x = models.FloatField()
+    position_y = models.FloatField()
+    position_z = models.FloatField()
+    scale_x = models.FloatField(default=1.0)
+    scale_y = models.FloatField(default=1.0)
+    scale_z = models.FloatField(default=1.0)
+    rotation_x = models.FloatField(default=0.0)
+    rotation_y = models.FloatField(default=0.0)
+    rotation_z = models.FloatField(default=0.0)
+    volume = models.FloatField(null=True, blank=True)  # in mm³
+
+    # Linked list implementation
+    next_object = models.OneToOneField(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='previous_object'
+    )
+
+    # Additional metadata
+    is_first = models.BooleanField(default=False)  # True if this is the first object in the list
+    order_index = models.IntegerField(default=0)  # For maintaining order even if links break
+
+    class Meta:
+        ordering = ['order_index']
+
+    def __str__(self):
+        return f"Object {self.object_id}: {self.name}"
+
+    def save(self, *args, **kwargs):
+        # If this is the first object for this gcode_file, mark it as first
+        if not self.pk and not self.gcode_file.objects.exists():
+            self.is_first = True
+
+        # If order_index is not set, put it at the end
+        if not self.order_index:
+            max_order = self.gcode_file.objects.aggregate(Max('order_index'))['order_index__max']
+            self.order_index = (max_order or 0) + 1
+
+        super().save(*args, **kwargs)
+
+
+# Add these methods to your GCodeFile model
+def add_object_methods_to_GCodeFile():
+    def get_first_object(self):
+        """Get the first object in the linked list."""
+        return self.objects.filter(is_first=True).first()
+
+    def get_all_objects_ordered(self):
+        """Get all objects in order."""
+        return self.objects.all().order_by('order_index')
+
+    def add_object(self, object_data):
+        """Add a new object to the end of the list."""
+        # Create new object
+        new_object = GCodeObject.objects.create(
+            gcode_file=self,
+            **object_data
+        )
+
+        # If this is the first object, mark it as such
+        if self.objects.count() == 1:
+            new_object.is_first = True
+            new_object.save()
+            return new_object
+
+        # Find the last object in the list
+        last_object = self.objects.filter(next_object__isnull=True).first()
+        if last_object:
+            last_object.next_object = new_object
+            last_object.save()
+
+        return new_object
+
+    def reorder_objects(self, new_order):
+        """
+        Reorder objects based on a list of object IDs.
+        new_order should be a list of object IDs in the desired order.
+        """
+        objects = {obj.id: obj for obj in self.objects.all()}
+
+        # Validate that all IDs exist
+        if set(new_order) != set(objects.keys()):
+            raise ValueError("Invalid object IDs in new order")
+
+        # Update order_index for each object
+        for index, obj_id in enumerate(new_order):
+            obj = objects[obj_id]
+            obj.order_index = index
+            obj.is_first = (index == 0)
+            obj.save()
+
+        # Update next_object references
+        for i in range(len(new_order) - 1):
+            current_obj = objects[new_order[i]]
+            next_obj = objects[new_order[i + 1]]
+            current_obj.next_object = next_obj
+            current_obj.save()
+
+        # Clear next_object for the last object
+        last_obj = objects[new_order[-1]]
+        last_obj.next_object = None
+        last_obj.save()
+
+    # Add methods to GCodeFile model
+    GCodeFile.get_first_object = get_first_object
+    GCodeFile.get_all_objects_ordered = get_all_objects_ordered
+    GCodeFile.add_object = add_object
+    GCodeFile.reorder_objects = reorder_objects
+
+
+
 
 
 class ThreeMF(models.Model):
     file = models.FileField(upload_to='threemf')
     #p = models.ForeignKey(PrintableFile, related_name='threemf',on_delete=models.CASCADE)
 
-    def save(self, *args, **kwargs):
-        i = 1
-        file_content = self.file.read()
-        try:
-            plates = []
-            zip_file = ZipFile(BytesIO(file_content))
-            config_text = zip_file.read("Metadata/slice_info.config").decode("utf-8")
-            config = xmltodict.parse(config_text)
-            if(isinstance( config['config']['plate'], list)):
-                print("it was a list")
-                for plate in config['config']['plate']:
-                    pconfig = metatoplate(plate['metadata'])
-                    plates.append(pconfig)
-            else:
-                pconfig = metatoplate(config['config']['plate']['metadata'])
-                plates.append(pconfig)
-            i = 1
-            for plate in plates:
-                i = 1
-                gcode = zip_file.read(f"Metadata/plate_{plate['index']}.gcode")
-                md5 = hashlib.md5(gcode).hexdigest().upper()
-                md5_file = zip_file.read(f"Metadata/plate_{plate['index']}.gcode.md5").decode("utf-8")
-                png = zip_file.read(f"Metadata/plate_{plate['index']}.png")
-                if (md5 != md5_file):
-                    print("MD5 mismatch")
+    def process_plates_in_threemf(self, zip_file):
+        config_text = zip_file.read("Metadata/model_settings.config").decode("utf-8")
+        plates = PlateConfigParser.create_db_plates(self, config_text)
+        return plates
 
-                try:
-                    # Check if the md5 already exists
-                    if GCodeFile.objects.filter(md5=md5).exists():
-                        # MD5 exists, skip creating new GCodeFile
-                        print(f"MD5 {md5} already exists. Skipping creation.")
-                    else:
-                        k = None
-                        try:
-                            k = Folder.objects.order_by('id').first()
-                            if k is None:
-                                k = Folder.objects.create(name="DEFAULT")
-                        except Exception as e:
-                            print(e)
+@receiver(post_save, sender=ThreeMF)
+def process_threemf_after_save(sender, instance, **kwargs):
+    # Check if the file has changed or if this is a new instance
+    file_content = instance.file.read()
+    try:
+        with ZipFile(BytesIO(file_content)) as zip_file:
+            # Here you can process the file as needed
+            # For instance, you might want to validate the content or extract some metadata
+            instance.process_plates_in_threemf(zip_file)
+    except Exception as e:
+        # Handle any exceptions that occur during file processing
+        raise ValidationError(f"Failed to process the 3MF file: {str(e)}")
+    finally:
+        # Ensure the file pointer is reset to the beginning
+        instance.file.seek(0)
 
-                        g = GCodeFile()
 
-                        g.filename = f"{self.file.name}_plate{plate['index']}.gcode"
-                        g.displayname = f"{self.file.name}"
-                        g.gcode.save(md5, File(BytesIO(gcode)), save=False)
-                        g.image.save(f"{md5}.png", File(BytesIO(png)), save=False)
-                        g.nozzle = plate['nozzle_diameters']
-                        g.weight = plate['weight']
-                        g.print_time = float(plate['prediction'])
-                        g.md5 = md5
-                        g.save()
-                        g.folders.add(k)
-                        g.save()
-                        print(f"New GCodeFile with MD5 {md5} created.")
-                except IntegrityError:
-                    # This catches any unique constraint violation if md5 is set to unique
-                    print(f"Could not create GCodeFile. MD5 {md5} might already be in use.")
-        except Exception as e:
-            print(f"{e}")
-        #super(ThreeMF, self).save(*args, **kwargs)
+@dataclass
+class PlateMetadata:
+    plater_id: str
+    plater_name: str
+    locked: bool
+    gcode_file: str
+    thumbnail_file: str
+    thumbnail_no_light_file: str
+    top_file: str
+    pick_file: str
+    pattern_bbox_file: str
+
+
+class PrintPlate(models.Model):
+    """Model to store plate configuration data"""
+    plater_id = models.CharField(max_length=100)
+    plater_name = models.CharField(max_length=255)
+    locked = models.BooleanField(default=False)
+    gcode_file = models.CharField(max_length=255)
+    thumbnail_file = models.CharField(max_length=255)
+    thumbnail_no_light_file = models.CharField(max_length=255)
+    top_file = models.CharField(max_length=255)
+    pick_file = models.CharField(max_length=255)
+    pattern_bbox_file = models.CharField(max_length=255)
+
+    # Reference to the ThreeMF file this plate belongs to
+    three_mf = models.ForeignKey('ThreeMF', on_delete=models.CASCADE, related_name='plates')
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ['three_mf', 'plater_id']
+        ordering = ['plater_id']
+
+    def __str__(self):
+        return f"Plate {self.plater_id}: {self.plater_name}"
+
+
+class PlateConfigParser:
+    """Parser for plate configuration XML files"""
+
+    @staticmethod
+    def parse_bool(value: str) -> bool:
+        return value.lower() == 'true'
+
+    @staticmethod
+    def metadata_to_dict(metadata_elements) -> Dict[str, str]:
+        """Convert metadata XML elements to dictionary"""
+        return {
+            element.attrib['key']: element.attrib['value']
+            for element in metadata_elements
+        }
+
+    @staticmethod
+    def parse_plate(plate_element) -> PlateMetadata:
+        """Parse a single plate element into a PlateMetadata object"""
+        metadata = PlateConfigParser.metadata_to_dict(plate_element.findall('metadata'))
+
+        return PlateMetadata(
+            plater_id=metadata['plater_id'],
+            plater_name=metadata['plater_name'],
+            locked=PlateConfigParser.parse_bool(metadata['locked']),
+            gcode_file=metadata['gcode_file'],
+            thumbnail_file=metadata['thumbnail_file'],
+            thumbnail_no_light_file=metadata['thumbnail_no_light_file'],
+            top_file=metadata['top_file'],
+            pick_file=metadata['pick_file'],
+            pattern_bbox_file=metadata['pattern_bbox_file']
+        )
+
+    @staticmethod
+    def parse_config(xml_content: str) -> List[PlateMetadata]:
+        """Parse the entire config XML and return list of PlateMetadata"""
+        root = ET.fromstring(xml_content)
+        plates = []
+
+        # Handle both single plate and multiple plate cases
+        plate_elements = root.findall('plate')
+
+        for plate_element in plate_elements:
+            plate_metadata = PlateConfigParser.parse_plate(plate_element)
+            plates.append(plate_metadata)
+
+        return plates
+
+    @staticmethod
+    def create_db_plates(three_mf_instance, xml_content: str) -> List[PrintPlate]:
+        """Parse XML and create PrintPlate instances in the database"""
+
+        plates_metadata = PlateConfigParser.parse_config(xml_content)
+        created_plates = []
+
+        for plate_metadata in plates_metadata:
+            i = 0
+            plate = PrintPlate.objects.create(
+                three_mf=three_mf_instance,
+                plater_id=plate_metadata.plater_id,
+                plater_name=plate_metadata.plater_name,
+                locked=plate_metadata.locked,
+                gcode_file=plate_metadata.gcode_file,
+                thumbnail_file=plate_metadata.thumbnail_file,
+                thumbnail_no_light_file=plate_metadata.thumbnail_no_light_file,
+                top_file=plate_metadata.top_file,
+                pick_file=plate_metadata.pick_file,
+                pattern_bbox_file=plate_metadata.pattern_bbox_file
+            )
+            created_plates.append(plate)
+
+        return created_plates
+
+
 

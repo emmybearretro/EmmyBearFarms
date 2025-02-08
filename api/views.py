@@ -4,8 +4,7 @@ from rest_framework.response import Response
 from rest_framework import status
 
 from api.serializers import PrinterSerializer, PrinterStateSerializer
-from bambu.models import Printer
-
+from bambu.models import Printer, ThreeMF
 
 
 # Create your views here.
@@ -88,3 +87,35 @@ class PrinterStatusView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+class FileUploadView(APIView):
+    def post(self, request, format=None):
+        try:
+            if 'file' not in request.FILES:
+                return Response({
+                    'error': 'No file provided'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            uploaded_file = request.FILES['file']
+
+            # Validate file extension
+            if not uploaded_file.name.lower().endswith('.3mf'):
+                return Response({
+                    'error': 'Invalid file format. Only .3mf files are accepted'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            # Create ThreeMF instance
+            three_mf = ThreeMF()
+            three_mf.file.save(uploaded_file.name, uploaded_file)
+
+            # The ThreeMF model's save() method will handle the extraction and
+            # creation of GCodeFile instances
+
+            return Response({
+                'message': 'File processed successfully',
+                'filename': uploaded_file.name
+            }, status=status.HTTP_201_CREATED)
+
+        except Exception as e:
+            return Response({
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

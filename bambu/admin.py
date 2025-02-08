@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.utils.safestring import mark_safe
 
 from bambu.models import ThreeMF, GCodeFile, Printer, ProductionQueue, PrinterState, Folder, \
-    PredefinedCommand, PrinterCommand
+    PredefinedCommand, PrinterCommand, PrintPlate
 
 
 # Register your models here.
@@ -81,3 +81,8 @@ class PrinterCommandAdmin(admin.ModelAdmin):
     #     if 'delete_selected' in actions:
     #         del actions['delete_selected']
     #     return actions
+
+
+@admin.register(PrintPlate)
+class PrintPlateAdmin(admin.ModelAdmin):
+    pass
