@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="nes-container with-title">
+  <p class="title">Add {{ gcode_file.filename }} to Production Queue</p>
+  <form method="post">
+    {% csrf_token %}
+    <div class="nes-field">
+      <label for="printer">Printer</label>
+      <select name="printer" id="printer" class="nes-select">
+        <option value="">Select Printer</option>
+        {% for printer in printers %}
+          <option value="{{ printer.id }}">{{ printer.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="nes-field">
+      <label for="priority">Priority</label>
+      <select name="priority" id="priority" class="nes-select">
+        <option value="0">Lowest</option>
+        <option value="5">Low</option>
+        <option value="10">Medium</option>
+        <option value="15">High</option>
+        <option value="20">Highest</option>
+
+      </select>
+    </div>
+    <div class="nes-field">
+      <label>
+        <input type="checkbox" class="nes-checkbox" name="bed_leveling" />
+        <span>Bed Leveling</span>
+      </label>
+    </div>
+    <div class="nes-field">
+      <label>
+        <input type="checkbox" class="nes-checkbox is-disabled" name="use_ams" />
+        <span>Use AMS</span>
+      </label>
+    </div>
+    <div class="nes-field">
+      <label for="plate_type">Plate Type</label>
+      <select name="plate_type" id="plate_type" class="nes-select">
+        {% for value, label in plate_choices %}
+          <option value="{{ value }}">{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button type="submit" class="nes-btn is-primary">Add to Queue</button>
+  </form>
+</div>
+{% endblock %}

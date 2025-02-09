@@ -1,22 +1,62 @@
 {% load static %}
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="tui-bg-blue-black">
 <head>
     <meta charset="UTF-8">
     <title>Emmy Bear Farms</title>
-    <!-- ASSETSS -->
-    <link rel="stylesheet" href="{% static 'css/all.css' %}">
-    <link rel="stylesheet" href="{% static 'css/bootstrap.css' %}">
-    <link rel="stylesheet" href="{% static 'css/style.css' %}">
-    <link rel="stylesheet" href="{% static 'css/lightbox.min.css' %}">
+
+    <!--<link rel="stylesheet" href="{% static 'tuicss.min.css' %}">-->
+<!--<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" integrity="sha512-Evv84Mr4kqVGRNSgIGL/F/aIDqQb7xQ2vcrdIwxfjThSH8CSR7PBEakCr51Ck+w+/U6swU2Im1vVX0SVk9ABhg==" crossorigin="anonymous" referrerpolicy="no-referrer" />-->
+
+
+
+<link href="https://cdn.materialdesignicons.com/5.4.55/css/materialdesignicons.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" integrity="sha512-Evv84Mr4kqVGRNSgIGL/F/aIDqQb7xQ2vcrdIwxfjThSH8CSR7PBEakCr51Ck+w+/U6swU2Im1vVX0SVk9ABhg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link href="https://fonts.googleapis.com/css?family=Press+Start+2P" rel="stylesheet">
+    <link href="https://unpkg.com/nes.css/css/nes.css" rel="stylesheet" />
+        <style>
+
+
+        .centered-cell {
+    text-align: center; /* Center text */
+}
+
+.centered-cell img {
+    display: block; /* Makes the image a block element */
+    margin: 0 auto; /* Centers the image horizontally */
+}
+
+.highlight {
+    background-color: red; /* Example: #e6ffe6 for a light green */
+}
+
+.normal {
+    /* Optional: Define default styles if different from the table's default */
+    background-color: #e0a800; /* Or whatever your normal background color is */
+}
+
+    </style>
+
+    {% block extra_styles %}
+    {% endblock %}
 </head>
-<body>
+<body class="center" style="padding: 50px">
+<nav>
+  <ul class="nes-container is-dark" style="display: flex; align-items: center; list-style-type: none;">
+    <li><a href="{% url 'printer_list' %}" class="nes-btn">All Printers</a></li>
+    <li><a href="{% url 'print-queue' %}" class="nes-btn">Production Queue</a></li>
+
+    <li><a href="{% url 'queued-no-printers' %}" class="nes-btn">Queued No Printers</a></li>
+    <li><a href="{% url 'file-list-view' %}" class="nes-btn">Files</a></li>
+    <li><a href="#" class="nes-btn">printqueue</a></li>
+  </ul>
+</nav>
+
+
+
 {% block content %}
 {% endblock %}
-<script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
-<script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
-<script src="{% static 'js/lightbox.min.js' %}"></script>
-<script src="{% static 'js/main.js' %}"></script>
-</body>
+
+    </body>
 </html>

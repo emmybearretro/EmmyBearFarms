@@ -1,9 +1,45 @@
 {% extends 'base.html' %}
 
 {% block content %}
-
-    <h1> BEEP BOOP </h1>
-    {% for printer in printer_list %}
-        {{ printer.serial_number }} - {{ printer.pk }}
-    {% endfor %}
+    <div class="nes-container with-title is-centered" style="text-align: left;">
+        <p class="title">PRINTERS</p>
+        <table class="nes-table is-bordered is-centered">
+            <thead>
+                <tr>
+                    <th scope="col">Name</th>
+                    <th scope="col">IP</th>
+                    <th scope="col">Serial Number</th>
+                    <th scope="col">Nozzle Type</th>
+                    <th scope="col">Nozzle Diameter</th>
+                    <th scope="col">State</th>
+                    <th scope="col">Current State</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for printer in printer_list %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'printer_detail' printer.serial_number %}" class="nes-btn is-primary">
+                                {{ printer.name }}
+                            </a>
+                        </td>
+                        <td>{{ printer.ip_address }}</td>
+                        <td>
+                            <a href="{% url 'printer_detail' printer.serial_number %}" class="nes-btn is-primary">
+                                {{ printer.serial_number }}
+                            </a>
+                        </td>
+                        <td>{{ printer.state.nozzle_type }}</td>
+                        <td>{{ printer.state.nozzle_diameter }}mm</td>
+                        <td>{{ printer.state.gcode_state }}</td>
+                        <td>{{ printer.state.current_state }}</td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center">No printers available.</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 {% endblock %}

@@ -1,0 +1,135 @@
+{% extends 'base.html' %}
+
+{% block extra_styles %}
+<style>
+    .large-icon {
+    font-size: 24px; /* Adjust this value for the size you want. 24px is fairly large for icons */
+    vertical-align: middle; /* This will align the icon with the text */
+}
+        /* Ensure the table cells are not too narrow */
+    .nes-table th, .nes-table td {
+        min-width: 50px; /* Base minimum width */
+    }
+
+    /* Specific width for the Nozzle column */
+    .nozzle-column {
+        width: 120px; /* Adjust this value to make it just slightly longer than "1.0 mm" */
+    }
+        .duration-column {
+        width: 180px; /* Adjust this value to make it just slightly longer than "1.0 mm" */
+    }
+
+        .image-column {
+            width: 155px;
+        }
+
+        .action-column {
+            width: 200px;
+        }
+
+    </style>
+{% endblock %}
+
+{% block content %}
+
+    <section>
+            <div class="nes-container with-title">
+            <p class="title">Upload 3MF File</p>
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <label for="file">Select file:</label>
+                <input type="file" name="file" accept=".3mf" class="nes-input" id="id_file" required>
+                <button type="submit" class="nes-btn is-primary">Upload</button>
+            </form>
+        </div>
+
+<div class="nes-container with-title">
+  <p class="title">At Files At Latest Revision</p>
+    <div class="nes-table" style="text-align: left; padding: 10px;">
+            <table class="nes-table is-centered is-bordered" style="width: 100%">
+                <thead>
+                <tr>
+                    <th class="action-column">Action</th>
+                    <th class="image-column"></th>
+                    <th><span class="mdi mdi-file-outline large-icon"></span></th>
+                    <th class="nozzle-column"> <span class="mdi mdi-printer-3d-nozzle large-icon"></span></th>
+                    <th class="duration-column"><span class="mdi mdi-timer-outline large-icon"></span></th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for gcode_file in gcode_files %}
+                    <tr data-url="{% url 'add_to_queue' gcode_file.id %}"  >
+                    <td style="padding: 20px;">
+
+                                <button class="nes-btn is-warning open-dialog">Queue File</button>
+
+                        <br>
+
+                                <a href="{#   url 'file-update' gcode_file.pk #}#" class="nes-btn is-warning">Edit File</a>
+                        <br>
+                                <a href="{% url 'file-delete' gcode_file.pk %}"  class="nes-btn is-warning">Delete File</a>
+
+                    </td>
+                        <td>{{ gcode_file.image_tag }}</td>
+                        <td> {% for folder in gcode_file.folders.all %}
+                                OO {{ folder.name }} OO
+                            <br>
+                            {% endfor %}
+                            {{ gcode_file.print_plate.three_mf.file.name }} / {{ gcode_file.filename }}</td>
+                        <td class="nozzle-column">{{ gcode_file.nozzle }} mm</td>
+                        <td class="centered-cell duration-column">{{ gcode_file.duration_formatted.hours }}h{{ gcode_file.duration_formatted.minutes }}m{{ gcode_file.duration_formatted.seconds }}s
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center">No Files available.</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+    </div>
+</div>
+            <dialog class="nes-dialog" id="dialog-default">
+    <form method="dialog">
+      <p class="title">WARNING</p>
+      <p>Are you sure you want to queue this job to the printer?</p>
+      <menu class="dialog-menu">
+        <button class="nes-btn">Cancel</button>
+        <button class="nes-btn is-primary" id="confirmPrint">Confirm</button>
+      </menu>
+    </form>
+  </dialog>
+    </section>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+  var dialog = document.getElementById('dialog-default');
+  var confirmButton = document.getElementById('confirmPrint');
+
+  // Function to handle opening the dialog with the correct URL data
+  document.querySelectorAll('.open-dialog').forEach(button => {
+    button.addEventListener('click', function(e) {
+      e.preventDefault();
+      // Store the URL for the confirm action
+      dialog.dataset.url = this.closest('tr').dataset.url;
+      dialog.showModal();
+    });
+  });
+
+  // Handle the confirm action by redirecting to the stored URL
+  confirmButton.addEventListener('click', function(e) {
+    if (dialog.dataset.url) {
+      window.location.href = dialog.dataset.url;
+    }
+    dialog.close();
+  });
+
+  // Cancel just closes the dialog
+  dialog.querySelector('.nes-btn:not(.is-primary)').addEventListener('click', function() {
+    dialog.close();
+  });
+});
+</script>
+
+{% endblock %}
+
