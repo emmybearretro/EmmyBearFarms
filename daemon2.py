@@ -85,7 +85,11 @@ def process_command_queue(printer_mqtt:bl.Printer,django_printer:Printer):
             logging.info("Running command: %s", command)
             #do the command
             cmdtxt = command.predefined_command.command
-            arguments = json.loads(command.arguments)
+            try:
+                arguments = json.loads(command.arguments)
+            except json.decoder.JSONDecodeError:
+                arguments = {}
+
             if cmdtxt == "upload_file":
                 #arguments are for us to read a file
                 of = open(arguments['filepath'])
@@ -99,6 +103,7 @@ def process_command_queue(printer_mqtt:bl.Printer,django_printer:Printer):
                 }
 
 
+# {'ams_mapping': [], 'bed_leveling': True, 'bed_type': 'textured_plate', 'filename': 'Blade_PLA_9m48s_L8etNj0.3mf', 'flow_calibration': True, 'plate_number': 1, 'skip_objects': [], 'use_ams': False, 'vibration_calibration': True}
             printer_mqtt.call_method_by_name(cmdtxt,**arguments)
 
             #printer_mqtt.call_method_by_name("start_print", "example.gcode", 1, True, [0], None)

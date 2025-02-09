@@ -426,7 +426,25 @@ def add_to_command_queue(request, serial_number, queue_id):
         arguments=json.dumps(arguments),
     )
 
-    args = {}
+    args = {
+        "filename": arguments['upload_file'],
+        "plate_number": 1, #we always make it as plate 1 when we send the file
+        "bed_leveling": queue_item.print_file.print_settings.bed_leveling,
+        "flow_calibration": queue_item.print_file.print_settings.flow_calibration,
+        "vibration_calibration": queue_item.print_file.print_settings.vibration_calibration,
+        "bed_type": queue_item.print_file.print_settings.plate_type,
+        "use_ams": queue_item.print_file.print_settings.use_ams,
+        "ams_mapping": queue_item.print_file.print_settings.ams_mapping,
+        "skip_objects": queue_item.print_file.print_settings.skip_objects,
+    }
+
+    PrinterCommand.objects.create(
+        predefined_command=print_command,
+        position=last_position + 2,
+        printer=printer,
+        arguments=json.dumps(args),
+    )
+
 
     # def start_print(self,filename: str,
     #                     plate_number: int,
